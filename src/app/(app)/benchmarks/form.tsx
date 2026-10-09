@@ -13,6 +13,7 @@ export function BenchmarkForm() {
   const [totalSrp, setTotalSrp] = useState<number | null>(null);
   const [price, setPrice] = useState<number | null>(null);
   const [kind, setKind] = useState<"paid" | "advertised">("paid");
+  const [vehicle, setVehicle] = useState<"purchase" | "trade">("purchase");
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -27,7 +28,7 @@ export function BenchmarkForm() {
         }
         setMsg(null);
         start(async () => {
-          const res = await addBenchmark({ source, url: url || null, observedOn, totalSrpCents: totalSrp, priceCents: price, kind, note: note || null });
+          const res = await addBenchmark({ vehicle, source, url: url || null, observedOn, totalSrpCents: totalSrp, priceCents: price, kind, note: note || null });
           if (!res.ok) {
             setMsg(res.error + (res.issues ? ` (${Object.values(res.issues).join("; ")})` : ""));
             return;
@@ -53,6 +54,13 @@ export function BenchmarkForm() {
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium">Observed on</span>
         <input type="date" className="field" value={observedOn} required onChange={(e) => setObservedOn(e.target.value)} />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium">About which vehicle</span>
+        <select className="field" value={vehicle} onChange={(e) => setVehicle(e.target.value as "purchase" | "trade")}>
+          <option value="purchase">The 4Runner I am buying</option>
+          <option value="trade">The Tesla I am selling or trading</option>
+        </select>
       </label>
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium">Kind</span>

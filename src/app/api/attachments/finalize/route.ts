@@ -7,9 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 export const maxDuration = 60;
 
 const bodySchema = z.object({
-  dealId: z.uuid(),
+  dealId: z.uuid().nullable().optional(),
+  inquiryId: z.uuid().nullable().optional(),
   path: z.string().min(1).max(300),
-  kind: z.enum(["sticker", "worksheet", "buyers_order", "photo", "other"]),
+  kind: z.enum(["sticker", "worksheet", "buyers_order", "listing", "photo", "other"]),
   mime: z.enum(ATTACHMENT_MIMES),
   bytes: z.number().int().positive().max(ATTACHMENT_MAX_BYTES),
   originalName: z.string().max(200).nullable(),
@@ -27,7 +28,8 @@ export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Bad request." }, { status: 400 });
   const b = parsed.data;
-  if (!b.path.startsWith(`deals/${b.dealId}/`)) return NextResponse.json({ error: "Path does not belong to this deal." }, { status: 400 });
+  const owner = b.dealId ? `deals/${b.dealId}/` : b.inquiryId ? `inquiries/${b.inquiryId}/` : null;
+  if (!owner || !b.path.startsWith(owner)) return NextResponse.json({ error: "Path does not belong to this record." }, { status: 400 });
 
   const bucket = supabase.storage.from("attachments");
   const { data: blob, error: dlError } = await bucket.download(b.path);
@@ -71,7 +73,7 @@ export async function POST(req: NextRequest) {
   const sub = typeof claims.claims.sub === "string" ? claims.claims.sub : null;
   const { data: row, error } = await supabase
     .from("attachments")
-    .insert({ deal_id: b.dealId, kind: b.kind, storage_path: storagePath, thumb_path: thumbPath, mime, bytes, width, height, original_name: b.originalName, created_by: sub })
+    .insert({ deal_id: b.dealId ?? null, inquiry_id: b.inquiryId ?? null, kind: b.kind, storage_path: storagePath, thumb_path: thumbPath, mime, bytes, width, height, original_name: b.originalName, created_by: sub })
     .select("*")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

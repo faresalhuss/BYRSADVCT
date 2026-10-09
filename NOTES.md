@@ -20,3 +20,8 @@ One line per lesson. Corrections and confirmed approaches alike. Why each matter
 - Lighthouse (simulated slow 4G, 4x CPU) on the local build gave LCP 3.5 s because the deals list waits on Supabase from a laptop in Atlanta to us-east-1; the deployed app runs next to the database and is measured separately.
 - Verifying on the deployed app caught a false "sticker does not sum" flag when a total SRP is entered before any sticker lines; an empty line list is "not yet entered", not a sum of zero.
 - Playwright's extraHTTPHeaders (used for the Vercel bypass) also attaches to the app's own RSC prefetches and makes WebKit log access-control errors; set the bypass cookie once through the query parameters instead when checking for console errors.
+- Georgia lease TAVT (since 2022-01-01, HB 63 / DOR bulletin MVD-2021-04): base = depreciation + amortized amounts + cash down; rent charge, rebates and trade are not taxed. The first draft assumed "sum of payments"; research corrected it.
+- Georgia Form MV-7D confirms manufacturer rebates and dealer fees enter the purchase TAVT base; the rule is now v2 and verified. The golden fixture has no rebates, so its expected values did not move.
+- Zip 30305 is Southeast Toyota territory: national TFS college/military rebates are explicitly unavailable in GA; the SETF versions ($500 each, stack with special APR, not with each other) apply instead.
+- A Suspense fallback must not call `usePathname()` itself; the "static" nav variant has to be hook-free or the build fails prerendering.
+- Vercel bodies cap at 4.5 MB, so the multi-document import uploads to `imports/<batch>/` from the browser, reads them server-side in one Claude call, and moves them into `deals/<id>/` when the deal is created.

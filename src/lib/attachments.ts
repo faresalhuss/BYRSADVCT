@@ -1,10 +1,11 @@
 export const ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
 export const ATTACHMENT_MIMES = ["application/pdf", "image/jpeg", "image/png", "image/heic", "image/heif", "image/webp"] as const;
-export type AttachmentKind = "sticker" | "worksheet" | "buyers_order" | "photo" | "other";
+export type AttachmentKind = "sticker" | "worksheet" | "buyers_order" | "listing" | "photo" | "other";
 export const ATTACHMENT_KINDS: { value: AttachmentKind; label: string }[] = [
   { value: "sticker", label: "Window sticker" },
   { value: "worksheet", label: "Dealer worksheet" },
   { value: "buyers_order", label: "Buyer's order" },
+  { value: "listing", label: "Listing screenshot" },
   { value: "photo", label: "Photo" },
   { value: "other", label: "Other" },
 ];

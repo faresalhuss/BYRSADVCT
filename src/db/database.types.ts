@@ -34,7 +34,8 @@ export type Database = {
           bytes: number
           created_at: string
           created_by: string | null
-          deal_id: string
+          deal_id: string | null
+          inquiry_id: string | null
           height: number | null
           id: string
           kind: string
@@ -48,7 +49,8 @@ export type Database = {
           bytes: number
           created_at?: string
           created_by?: string | null
-          deal_id: string
+          deal_id?: string | null
+          inquiry_id?: string | null
           height?: number | null
           id?: string
           kind?: string
@@ -62,7 +64,8 @@ export type Database = {
           bytes?: number
           created_at?: string
           created_by?: string | null
-          deal_id?: string
+          deal_id?: string | null
+          inquiry_id?: string | null
           height?: number | null
           id?: string
           kind?: string
@@ -86,6 +89,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          vehicle: string
           kind: string
           note: string | null
           observed_on: string
@@ -97,6 +101,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          vehicle?: string
           kind: string
           note?: string | null
           observed_on: string
@@ -108,6 +113,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          vehicle?: string
           kind?: string
           note?: string | null
           observed_on?: string
@@ -268,6 +274,80 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      inquiries: {
+        Row: {
+          address_line: string | null
+          advertised_price_cents: number | null
+          city: string | null
+          converted_deal_id: string | null
+          created_at: string
+          created_by: string | null
+          dealership_name: string
+          id: string
+          listing_url: string | null
+          msrp_cents: number | null
+          notes: string | null
+          phone: string | null
+          salesperson: string | null
+          state: string | null
+          status: string
+          updated_at: string
+          vehicle: Json
+          website: string | null
+          zip: string | null
+        }
+        Insert: {
+          address_line?: string | null
+          advertised_price_cents?: number | null
+          city?: string | null
+          converted_deal_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dealership_name: string
+          id?: string
+          listing_url?: string | null
+          msrp_cents?: number | null
+          notes?: string | null
+          phone?: string | null
+          salesperson?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          vehicle?: Json
+          website?: string | null
+          zip?: string | null
+        }
+        Update: {
+          address_line?: string | null
+          advertised_price_cents?: number | null
+          city?: string | null
+          converted_deal_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dealership_name?: string
+          id?: string
+          listing_url?: string | null
+          msrp_cents?: number | null
+          notes?: string | null
+          phone?: string | null
+          salesperson?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          vehicle?: Json
+          website?: string | null
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquiries_converted_deal_id_fkey"
+            columns: ["converted_deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       outside_offers: {
         Row: {

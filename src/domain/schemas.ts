@@ -2,7 +2,10 @@ import { z } from "zod";
 import type {
   Benchmark,
   FinancingQuote,
+  LeaseTaxRule,
+  LeaseTerms,
   LineCategory,
+  RebateProgram,
   Offer,
   OfferLine,
   OutsideOffer,
@@ -84,6 +87,29 @@ export const paymentGridCellSchema = z.object({
   source: sourceSchema,
 }) satisfies z.ZodType<PaymentGridCell>;
 
+export const leaseTermsSchema = z.object({
+  termMonths: z.number().int().min(1).max(60).nullable(),
+  milesPerYear: z.number().int().min(1000).max(50000).nullable(),
+  agreedValueCents: centsOrNull,
+  capitalizedFeesCents: centsOrNull,
+  acquisitionFeeCents: centsOrNull,
+  acquisitionFeeCapitalized: z.boolean(),
+  capReductionCashCents: centsOrNull,
+  capReductionRebatesCents: centsOrNull,
+  capReductionTradeCents: centsOrNull,
+  residualPercent: z.number().min(0).max(1).nullable(),
+  residualCents: centsOrNull,
+  moneyFactor: z.number().min(0).max(0.02).nullable(),
+  quotedPaymentCents: centsOrNull,
+  quotedPaymentIncludesTax: z.boolean(),
+  dueAtSigningCents: centsOrNull,
+  firstPaymentAtSigning: z.boolean(),
+  taxIncludedInDueAtSigning: z.boolean(),
+  statedTaxCents: centsOrNull,
+  dispositionFeeCents: centsOrNull,
+  lender: z.string().max(120).nullable(),
+}) satisfies z.ZodType<LeaseTerms>;
+
 export const offerSchema = z.object({
   sellingPriceCents: centsOrNull,
   statedDiscountCents: centsOrNull.optional(),
@@ -96,6 +122,9 @@ export const offerSchema = z.object({
   paymentGrid: z.array(paymentGridCellSchema).max(60),
   gridPrincipalCents: centsOrNull.optional(),
   quoteExpiresOn: isoDateOrNull.optional(),
+  dealType: z.enum(["purchase", "lease"]).optional(),
+  lease: leaseTermsSchema.nullable().optional(),
+  appliedPrograms: z.array(z.string().min(1)).max(20).optional(),
 }) satisfies z.ZodType<Offer>;
 
 export const vehicleEnteredSchema = z.object({
@@ -175,7 +204,34 @@ export const taxRuleSchema = z.object({
   sourceUrl: z.url(),
   verifiedOn: isoDate,
   notes: z.string().max(2000).optional(),
+  lease: z
+    .object({
+      name: z.string().min(1).max(60),
+      rate: rateSchema,
+      basis: z.enum(["depreciation", "sum_of_payments", "monthly_payment", "agreed_value"]),
+      includesCapReductions: z.boolean(),
+      sourceUrl: z.url(),
+      verifiedOn: isoDate,
+      verified: z.boolean(),
+      notes: z.string().max(2000).optional(),
+    })
+    .optional() satisfies z.ZodType<LeaseTaxRule | undefined>,
 }) satisfies z.ZodType<TaxRule>;
+
+export const rebateProgramSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1).max(120),
+  amountCents: centsSchema,
+  eligibility: z.string().max(2000),
+  eligible: z.boolean(),
+  requiresTfsFinancing: z.boolean(),
+  stacksWithSpecialApr: z.boolean(),
+  appliesTo: z.array(z.enum(["purchase", "lease"])).min(1),
+  sourceUrl: z.string().max(500),
+  verifiedOn: isoDate,
+  endsOn: isoDateOrNull,
+  notes: z.string().max(2000).optional(),
+}) satisfies z.ZodType<RebateProgram>;
 
 export const promoRateSchema = z.object({
   id: z.string().min(1),
@@ -198,6 +254,15 @@ export const settingsSchema = z.object({
   benchmarkStaleDays: z.number().int().min(1).max(3650),
   taxRuleStaleDays: z.number().int().min(1).max(3650),
   gridRowAprTolerance: z.number().min(0).max(0.05),
+  lease: z
+    .object({
+      buyRateMoneyFactor: z.number().min(0).max(0.02).nullable(),
+      standardAcquisitionFeeCents: centsOrNull,
+      standardDispositionFeeCents: centsOrNull,
+      residuals: z.array(z.object({ termMonths: z.number().int(), milesPerYear: z.number().int(), percent: z.number().min(0).max(1), source: z.string().max(200), asOf: isoDate })).max(50),
+    })
+    .default({ buyRateMoneyFactor: null, standardAcquisitionFeeCents: null, standardDispositionFeeCents: null, residuals: [] }),
+  programs: z.array(rebateProgramSchema).max(30).default([]),
 }) satisfies z.ZodType<Settings>;
 
 export const settingsPayloadSchema = settingsSchema.extend({
@@ -206,6 +271,7 @@ export const settingsPayloadSchema = settingsSchema.extend({
 
 export const benchmarkSchema = z.object({
   id: z.string().min(1),
+  vehicle: z.enum(["purchase", "trade"]).optional(),
   source: z.string().min(1).max(120),
   url: z.url().nullable(),
   observedOn: isoDate,
@@ -231,6 +297,8 @@ export const dealFormSchema = z.object({
   sticker: stickerSchema,
   offer: offerSchema,
   revisionNote: z.string().max(300).nullable(),
+  /** Files uploaded through the import panel (under imports/<batch>/), attached to the deal on save. */
+  importFiles: z.array(z.object({ path: z.string().regex(/^imports\/[^/]+\/[^/]+$/), name: z.string().max(200), mime: z.string().max(80), bytes: z.number().int().positive() })).max(5).optional(),
 });
 export type DealForm = z.infer<typeof dealFormSchema>;
 
@@ -249,8 +317,28 @@ export const outsideOfferFormSchema = z.object({
   contingentOnInspection: z.boolean(),
   note: z.string().max(500).nullable(),
 });
+export const outsideOfferUpdateSchema = outsideOfferFormSchema.extend({ id: z.uuid() });
+
+export const inquiryFormSchema = z.object({
+  dealershipName: z.string().min(1, "Dealership name is required").max(120),
+  addressLine: z.string().max(200).nullable(),
+  city: z.string().max(80).nullable(),
+  state: z.string().length(2).nullable(),
+  zip: z.string().max(10).nullable(),
+  phone: z.string().max(40).nullable(),
+  website: z.string().max(300).nullable(),
+  listingUrl: z.string().max(500).nullable(),
+  salesperson: z.string().max(120).nullable(),
+  vehicle: vehicleEnteredSchema,
+  advertisedPriceCents: centsOrNull,
+  msrpCents: centsOrNull,
+  notes: z.string().max(4000).nullable(),
+  status: z.enum(["to_call", "called", "converted", "dismissed"]).default("to_call"),
+});
+export type InquiryForm = z.infer<typeof inquiryFormSchema>;
 
 export const benchmarkFormSchema = z.object({
+  vehicle: z.enum(["purchase", "trade"]).default("purchase"),
   source: z.string().min(1).max(120),
   url: z.url().nullable(),
   observedOn: isoDate,

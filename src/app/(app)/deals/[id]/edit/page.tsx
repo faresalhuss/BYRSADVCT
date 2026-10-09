@@ -5,15 +5,15 @@ import { DealEditor } from "@/components/editor/deal-editor";
 import { getDeal, getSettingsBundle, getTradeBundle, parseDecoded, parseOffer, parseSticker, parseVehicle, EMPTY_OFFER } from "@/db/queries";
 import type { DealForm } from "@/domain/schemas";
 import { todayIso } from "@/lib/dates";
+import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Edit deal" };
 
 export default function EditDealPage(props: PageProps<"/deals/[id]/edit">) {
   return (
     <main>
-      <h1 className="text-3xl">Edit deal</h1>
-      <p className="mt-1 text-sm text-ink-2">Saving a changed offer creates a new revision. The old one stays in the history.</p>
-      <Suspense fallback={<p className="mt-4 text-ink-2">Loading</p>}>
+      <PageHeader crumb={{ href: "/", label: "Deals" }} title="Edit deal" description="Saving a changed offer creates a new revision. The old one stays in the history." />
+      <Suspense fallback={<div className="skeleton h-64" aria-hidden="true" />}>
         <Editor params={props.params} />
       </Suspense>
     </main>
@@ -38,5 +38,5 @@ async function Editor({ params }: { params: PageProps<"/deals/[id]/edit">["param
     offer: d.latest ? parseOffer(d.latest.offer) : EMPTY_OFFER,
     revisionNote: null,
   };
-  return <DealEditor mode="edit" dealId={id} initial={initial} previousOffer={d.latest ? parseOffer(d.latest.offer) : null} context={{ taxRule: settings.taxRule, settings: settings.settings, trade: trade.profile, today: todayIso() }} />;
+  return <DealEditor mode="edit" dealId={id} initial={initial} previousOffer={d.latest ? parseOffer(d.latest.offer) : null} context={{ taxRule: settings.taxRule, settings: settings.settings, trade: trade.profile, today: todayIso(), importEnabled: false, openImport: false }} />;
 }

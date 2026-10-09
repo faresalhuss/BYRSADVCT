@@ -6,15 +6,15 @@ import type { Settings, TaxRule } from "./types";
  * The manufacturer-rebate rule is marked unverified until confirmed against Form MV-7D.
  */
 export const GEORGIA_TAVT_2026: TaxRule = {
-  id: "ga-tavt-2026-v1",
+  id: "ga-tavt-2026-v2",
   state: "GA",
-  version: 1,
+  version: 2,
   name: "Georgia TAVT",
   rate: 0.07,
   ratePrecision: 4,
   tradeReducesBase: true,
-  rebatesReduceBase: false,
-  rebateRuleVerified: false,
+  rebatesReduceBase: true,
+  rebateRuleVerified: true,
   taxableByCategory: {
     dealer_fee: true,
     dealer_addon: true,
@@ -25,10 +25,20 @@ export const GEORGIA_TAVT_2026: TaxRule = {
     dealer_discount: false,
     other: false,
   },
-  sourceUrl: "https://dor.georgia.gov/motor-vehicles/vehicle-registration-license-plates/vehicle-taxes-title-ad-valorem-tax-tavt-and",
+  sourceUrl: "https://dor.georgia.gov/document/document-document/mv-7d-state-and-local-title-ad-valorem-tax-fees/download",
   verifiedOn: "2026-10-09",
   notes:
-    "Base for a dealer sale = selling price + taxable dealer fees and add-ons - trade allowance (trade VIN and owner recorded). Third-party guides say manufacturer rebates also reduce the base; unverified against Form MV-7D, so off by default. ELT and the lemon-law fee are not taxed.",
+    "Form MV-7D (rev. 1-2022): base = new vehicle retail sale price + other taxable fees (labor, freight, delivery, dealer fees, accessories, add-ons, mark-ups; not extended warranties) - manufacturer's rebate - trade-in value. Rate 7% per O.C.G.A. 48-5C-1 and DOR bulletin MVD-2023-02. ELT and the $3 lemon-law fee are government charges, not dealer fees, and are left out of the base here.",
+  lease: {
+    name: "Georgia TAVT (lease)",
+    rate: 0.07,
+    basis: "depreciation",
+    includesCapReductions: true,
+    sourceUrl: "https://dor.georgia.gov/document/document/policy-bulletin-mvd-2021-04-revised-tavt-calculation-leases/download",
+    verifiedOn: "2026-10-09",
+    verified: true,
+    notes: "Since 2022-01-01 (HB 63, O.C.G.A. 48-5C-1(a)(1)(E)): base = total depreciation + amortized amounts + cash down payments; rebates, trade allowances and the rent charge are not taxed (Form MV-7L). Paid at signing or capitalized.",
+  },
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -56,4 +66,6 @@ export const DEFAULT_SETTINGS: Settings = {
   benchmarkStaleDays: 30,
   taxRuleStaleDays: 180,
   gridRowAprTolerance: 0.0005,
+  lease: { buyRateMoneyFactor: null, standardAcquisitionFeeCents: null, standardDispositionFeeCents: null, residuals: [] },
+  programs: [],
 };

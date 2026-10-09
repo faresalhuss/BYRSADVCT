@@ -7,9 +7,10 @@ import { ATTACHMENT_KINDS, ATTACHMENT_MAX_BYTES, extensionFor, sniffMime, type A
 
 type Status = { state: "idle" } | { state: "uploading"; name: string } | { state: "processing"; name: string } | { state: "error"; message: string } | { state: "done"; name: string };
 
-export function Uploader({ dealId }: { dealId: string }) {
+export function Uploader({ dealId, inquiryId, defaultKind = "sticker", compact = false }: { dealId?: string; inquiryId?: string; defaultKind?: AttachmentKind; compact?: boolean }) {
   const router = useRouter();
-  const [kind, setKind] = useState<AttachmentKind>("sticker");
+  const [kind, setKind] = useState<AttachmentKind>(defaultKind);
+  const ownerPath = dealId ? `deals/${dealId}` : `inquiries/${inquiryId}`;
   const [status, setStatus] = useState<Status>({ state: "idle" });
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -27,7 +28,7 @@ export function Uploader({ dealId }: { dealId: string }) {
         return;
       }
       setStatus({ state: "uploading", name: file.name });
-      const path = `deals/${dealId}/${crypto.randomUUID()}.${extensionFor(mime)}`;
+      const path = `${ownerPath}/${crypto.randomUUID()}.${extensionFor(mime)}`;
       const { error } = await supabase.storage.from("attachments").upload(path, file, { contentType: mime, upsert: false });
       if (error) {
         setStatus({ state: "error", message: `${file.name}: ${error.message}` });
@@ -37,7 +38,7 @@ export function Uploader({ dealId }: { dealId: string }) {
       const res = await fetch("/api/attachments/finalize", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ dealId, path, kind, mime, bytes: file.size, originalName: file.name }),
+        body: JSON.stringify({ dealId: dealId ?? null, inquiryId: inquiryId ?? null, path, kind, mime, bytes: file.size, originalName: file.name }),
       });
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
@@ -51,11 +52,11 @@ export function Uploader({ dealId }: { dealId: string }) {
   }
 
   return (
-    <div className="card mt-4 flex flex-wrap items-end gap-3 p-3">
+    <div className={`${compact ? "" : "card mt-4 p-3"} flex flex-wrap items-end gap-3`}>
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium">This file is a</span>
         <select className="field" value={kind} onChange={(e) => setKind(e.target.value as AttachmentKind)}>
-          {ATTACHMENT_KINDS.map((k) => (
+          {ATTACHMENT_KINDS.filter((k) => dealId || k.value !== "buyers_order").map((k) => (
             <option key={k.value} value={k.value}>
               {k.label}
             </option>

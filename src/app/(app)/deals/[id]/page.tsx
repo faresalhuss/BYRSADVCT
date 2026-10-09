@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { DealReportView } from "@/components/report/deal-report-view";
-import { StatusPill } from "@/components/pills";
 import { ConfirmForm } from "@/components/confirm-form";
+import { Icon } from "@/components/icons";
+import { MapLink } from "@/components/map-link";
+import { StatusPill } from "@/components/pills";
+import { DealReportView } from "@/components/report/deal-report-view";
+import { PageHeader } from "@/components/ui";
 import { duplicateDeal, setArchived } from "@/db/actions";
 import { evaluate, getDeal, getEvalContext, parseSticker, parseVehicle } from "@/db/queries";
 import { formatDate } from "@/lib/dates";
@@ -11,7 +14,7 @@ import { formatDate } from "@/lib/dates";
 export default function DealPage(props: PageProps<"/deals/[id]">) {
   return (
     <main>
-      <Suspense fallback={<p className="text-ink-2">Loading deal</p>}>
+      <Suspense fallback={<div className="skeleton h-64" aria-hidden="true" />}>
         <Deal params={props.params} />
       </Suspense>
     </main>
@@ -30,56 +33,72 @@ async function Deal({ params }: { params: PageProps<"/deals/[id]">["params"] }) 
 
   return (
     <>
-      <header className="mb-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-3xl">{d.deal.dealership_name}</h1>
-            <p className="text-ink-2">
-              {vehicleText || "Vehicle not entered"}
-              {vehicle.vin && <span className="num"> · {vehicle.vin}</span>}
-            </p>
-            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-2">
-              <StatusPill status={d.deal.status} />
-              {d.deal.salesperson && <span>{d.deal.salesperson}</span>}
-              {d.deal.quote_expires_on && <span>Expires {formatDate(d.deal.quote_expires_on)}</span>}
-              <span>Revision {d.latest?.revision_no ?? 0}</span>
-              {archived && <span className="pill pill-info">archived</span>}
-            </p>
-          </div>
-          <div className="no-print flex flex-wrap gap-2">
+      <PageHeader
+        crumb={{ href: "/", label: "Deals" }}
+        title={d.deal.dealership_name}
+        description={
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>{vehicleText || "Vehicle not entered"}</span>
+            {vehicle.vin && <span className="mono text-xs">{vehicle.vin}</span>}
+            <StatusPill status={d.deal.status} />
+            {report.dealType === "lease" && <span className="pill pill-info pill-plain">lease</span>}
+            <span className="text-xs text-ink-3">Revision {d.latest?.revision_no ?? 0}</span>
+            {d.deal.quote_expires_on && <span className="text-xs text-ink-3">Expires {formatDate(d.deal.quote_expires_on)}</span>}
+            {archived && <span className="pill pill-info pill-plain">archived</span>}
+          </span>
+        }
+        actions={
+          <>
             <Link href={`/deals/${id}/edit`} className="btn btn-primary">
-              Edit
+              <Icon.Edit size={16} /> Edit
             </Link>
             <Link href={`/deals/${id}/attachments`} className="btn">
-              Attachments
+              <Icon.File size={16} /> Files
             </Link>
             <Link href={`/deals/${id}/notes`} className="btn">
               Notes
             </Link>
-          </div>
-        </div>
-        <nav aria-label="Deal pages" className="no-print mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          <Link href={`/deals/${id}/revisions`} className="tap inline-flex items-center underline">
+            <a href={`/api/deals/${id}/pdf`} className="btn" title="Dealer-style buyer's order as a PDF">
+              <Icon.Download size={16} /> PDF
+            </a>
+          </>
+        }
+      />
+      <div className="no-print -mt-3 mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <MapLink name={d.deal.dealership_name} address={d.deal.dealership_address} />
+        {d.deal.dealership_phone && (
+          <a href={`tel:${d.deal.dealership_phone.replace(/[^\d+]/g, "")}`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
+            <Icon.Phone size={14} /> {d.deal.dealership_phone}
+            {d.deal.salesperson && <span className="text-ink-3">· {d.deal.salesperson}</span>}
+          </a>
+        )}
+        {d.deal.dealership_website && (
+          <a href={d.deal.dealership_website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-ink-2 underline decoration-dotted underline-offset-4 hover:text-accent">
+            <Icon.Arrow size={14} className="rotate-[-45deg]" /> Website
+          </a>
+        )}
+        <span className="flex flex-wrap gap-x-4 text-ink-3">
+          <Link href={`/deals/${id}/revisions`} className="hover:text-ink">
             Revisions ({d.revisions.length})
           </Link>
-          <Link href={`/deals/${id}/print`} className="tap inline-flex items-center underline">
-            Printable summary
+          <Link href={`/deals/${id}/print`} className="hover:text-ink">
+            Print summary
           </Link>
-          <Link href={`/compare?ids=${id}`} className="tap inline-flex items-center underline">
+          <Link href={`/compare?ids=${id}`} className="hover:text-ink">
             Compare
           </Link>
-          <form action={duplicateDeal.bind(null, id)}>
-            <button type="submit" className="tap inline-flex items-center underline">
+          <form action={duplicateDeal.bind(null, id)} className="inline">
+            <button type="submit" className="hover:text-ink">
               Duplicate
             </button>
           </form>
-          <ConfirmForm action={setArchived.bind(null, id, !archived)} message={archived ? "Unarchive this deal?" : "Archive this deal? It moves to the Archived list."}>
-            <button type="submit" className="tap inline-flex items-center underline">
+          <ConfirmForm action={setArchived.bind(null, id, !archived)} message={archived ? "Unarchive this deal?" : "Archive this deal? It moves to the Archived list."} className="inline">
+            <button type="submit" className="hover:text-ink">
               {archived ? "Unarchive" : "Archive"}
             </button>
           </ConfirmForm>
-        </nav>
-      </header>
+        </span>
+      </div>
       <DealReportView report={report} sticker={sticker} vehicle={vehicle} settings={ctx.settingsBundle.settings} dealId={id} salesperson={d.deal.salesperson} dealershipName={d.deal.dealership_name} />
     </>
   );

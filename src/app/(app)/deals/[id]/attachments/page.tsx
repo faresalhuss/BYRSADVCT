@@ -33,7 +33,7 @@ async function Attachments({ params }: { params: PageProps<"/deals/[id]/attachme
           {d.deal.dealership_name}
         </Link>
       </p>
-      <h1 className="text-3xl">Attachments</h1>
+      <h1 className="mt-1">Attachments</h1>
       <p className="mt-1 text-sm text-ink-2">Window stickers, worksheets, buyer&apos;s orders and photos. PDF, JPEG, PNG or HEIC, up to 25 MB each. Stored privately.</p>
       <Uploader dealId={id} />
       {rows.length === 0 ? (

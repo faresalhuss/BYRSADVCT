@@ -41,6 +41,26 @@ export function parseDecoded(json: unknown): VehicleDecoded | null {
   return r.success ? r.data : null;
 }
 
+export type InquiryRow = Tables<"inquiries">;
+
+export async function listInquiries(): Promise<InquiryRow[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("inquiries").select("*").order("updated_at", { ascending: false });
+  return data ?? [];
+}
+
+export async function getInquiry(id: string): Promise<InquiryRow | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("inquiries").select("*").eq("id", id).maybeSingle();
+  return data ?? null;
+}
+
+export async function getInquiryAttachments(inquiryId: string): Promise<AttachmentRow[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("attachments").select("*").eq("inquiry_id", inquiryId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
 export interface SettingsBundle {
   settings: Settings;
   activeTaxRuleId: string;
@@ -108,6 +128,7 @@ export async function getBenchmarks(): Promise<Benchmark[]> {
   for (const row of data ?? []) {
     const r = benchmarkSchema.safeParse({
       id: row.id,
+      vehicle: row.vehicle === "trade" ? "trade" : "purchase",
       source: row.source,
       url: row.url,
       observedOn: row.observed_on,

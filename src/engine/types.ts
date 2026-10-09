@@ -143,6 +143,68 @@ export interface Offer {
   /** Principal the grid is based on, if the worksheet states it. Falls back to statedBalanceCents. */
   gridPrincipalCents?: Cents | null;
   quoteExpiresOn?: string | null; // ISO date
+  /** Purchase (default) or lease. A lease still records the sticker, fees and add-ons. */
+  dealType?: "purchase" | "lease";
+  lease?: LeaseTerms | null;
+  /** Ids of rebate programs from Settings that this deal applies (ticked by the buyer). */
+  appliedPrograms?: string[];
+}
+
+export interface LeaseTerms {
+  termMonths: number | null;
+  milesPerYear: number | null;
+  /** The lease's selling price. */
+  agreedValueCents: Cents | null;
+  /** Fees rolled into the cap cost other than the acquisition fee (doc fee, add-ons). */
+  capitalizedFeesCents: Cents | null;
+  acquisitionFeeCents: Cents | null;
+  acquisitionFeeCapitalized: boolean;
+  capReductionCashCents: Cents | null;
+  capReductionRebatesCents: Cents | null;
+  capReductionTradeCents: Cents | null;
+  residualPercent: number | null;
+  residualCents: Cents | null;
+  moneyFactor: number | null;
+  quotedPaymentCents: Cents | null;
+  quotedPaymentIncludesTax: boolean;
+  dueAtSigningCents: Cents | null;
+  firstPaymentAtSigning: boolean;
+  taxIncludedInDueAtSigning: boolean;
+  statedTaxCents: Cents | null;
+  dispositionFeeCents: Cents | null;
+  lender: string | null;
+}
+
+export interface LeaseTaxRule {
+  name: string;
+  rate: number;
+  /** What the lease tax is computed on. */
+  /** depreciation: (adjusted cap cost - residual) + amortized amounts + cash down (Georgia since 2022). */
+  basis: "depreciation" | "sum_of_payments" | "monthly_payment" | "agreed_value";
+  /** Whether cash cap cost reductions (money down) are added to the taxable base. */
+  includesCapReductions: boolean;
+  sourceUrl: string;
+  verifiedOn: string;
+  verified: boolean;
+  notes?: string;
+}
+
+/** A manufacturer or distributor program the buyer may qualify for (college grad, military, loyalty). */
+export interface RebateProgram {
+  id: string;
+  label: string;
+  amountCents: Cents;
+  /** Plain-language eligibility rules. */
+  eligibility: string;
+  /** Ticked by the buyer after reading the eligibility rules. */
+  eligible: boolean;
+  requiresTfsFinancing: boolean;
+  stacksWithSpecialApr: boolean;
+  appliesTo: ("purchase" | "lease")[];
+  sourceUrl: string;
+  verifiedOn: string;
+  endsOn: string | null;
+  notes?: string;
 }
 
 /* ---------- Trade ---------- */
@@ -180,6 +242,7 @@ export interface TaxRule {
   sourceUrl: string;
   verifiedOn: string; // ISO date
   notes?: string;
+  lease?: LeaseTaxRule;
 }
 
 export interface PromoRate {
@@ -206,10 +269,20 @@ export interface Settings {
   taxRuleStaleDays: number;
   /** Tolerance in APR points for cells of one grid row to be "the same APR". */
   gridRowAprTolerance: number;
+  lease: {
+    buyRateMoneyFactor: number | null;
+    standardAcquisitionFeeCents: Cents | null;
+    standardDispositionFeeCents: Cents | null;
+    /** Residual percentages by term and mileage, as published or quoted, with provenance. */
+    residuals: { termMonths: number; milesPerYear: number; percent: number; source: string; asOf: string }[];
+  };
+  programs: RebateProgram[];
 }
 
 export interface Benchmark {
   id: string;
+  /** Which vehicle this data point is about: the purchase target or the trade. */
+  vehicle?: "purchase" | "trade";
   source: string;
   url: string | null;
   observedOn: string; // ISO date
@@ -379,6 +452,13 @@ export interface DealReport {
   verdict: Verdict;
   target: Target;
   revisionDiff: RevisionDiff | null;
+  dealType: "purchase" | "lease";
+  lease: import("./lease").LeaseReport;
+  programs: {
+    applied: { program: RebateProgram; amountCents: Cents }[];
+    missing: RebateProgram[];
+    appliedTotal: Derived;
+  };
 }
 
 export interface RevisionDiffLine {

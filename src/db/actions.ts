@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { benchmarkFormSchema, dealFormSchema, noteFormSchema, outsideOfferFormSchema, settingsPayloadSchema, taxRuleSchema, tradeProfilePayloadSchema, type DealForm } from "@/domain/schemas";
+import { benchmarkFormSchema, dealFormSchema, noteFormSchema, outsideOfferFormSchema, outsideOfferUpdateSchema, settingsPayloadSchema, taxRuleSchema, tradeProfilePayloadSchema, type DealForm } from "@/domain/schemas";
 import { createClient } from "@/lib/supabase/server";
 import { getDeal, parseOffer, parseSticker } from "./queries";
 import type { Json } from "./database.types";
@@ -55,6 +55,14 @@ export async function createDeal(input: DealForm): Promise<ActionResult<{ id: st
   if (error || !deal) return { ok: false, error: error?.message ?? "Could not create the deal." };
   const { error: revError } = await supabase.from("deal_revisions").insert({ deal_id: deal.id, revision_no: 1, offer: f.offer as unknown as Json, note: f.revisionNote, created_by: uid });
   if (revError) return { ok: false, error: revError.message };
+  // Imported documents become the deal's attachments.
+  for (const file of f.importFiles ?? []) {
+    const newPath = file.path.replace(/^imports\/[^/]+\//, `deals/${deal.id}/`);
+    const { error: mv } = await supabase.storage.from("attachments").move(file.path, newPath);
+    if (mv) continue;
+    const kind = /sticker|monroney/i.test(file.name) ? "sticker" : /work|quote|order|sheet/i.test(file.name) ? "worksheet" : "other";
+    await supabase.from("attachments").insert({ deal_id: deal.id, kind, storage_path: newPath, mime: file.mime, bytes: file.bytes, original_name: file.name, created_by: uid });
+  }
   revalidatePath("/");
   return { ok: true, data: { id: deal.id } };
 }
@@ -180,6 +188,19 @@ export async function addOutsideOffer(input: z.infer<typeof outsideOfferFormSche
   return { ok: true, data: undefined };
 }
 
+export async function updateOutsideOffer(input: z.infer<typeof outsideOfferUpdateSchema>): Promise<ActionResult> {
+  const parsed = outsideOfferUpdateSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Check the offer.", issues: issuesOf(parsed.error) };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("outside_offers")
+    .update({ source: parsed.data.source, cents: parsed.data.cents, expires_on: parsed.data.expiresOn, contingent_on_inspection: parsed.data.contingentOnInspection, note: parsed.data.note })
+    .eq("id", parsed.data.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true, data: undefined };
+}
+
 export async function deleteOutsideOffer(id: string): Promise<void> {
   const supabase = await createClient();
   await supabase.from("outside_offers").delete().eq("id", id);
@@ -222,7 +243,7 @@ export async function addBenchmark(input: z.infer<typeof benchmarkFormSchema>): 
   const parsed = benchmarkFormSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Check the benchmark.", issues: issuesOf(parsed.error) };
   const supabase = await createClient();
-  const { error } = await supabase.from("benchmarks").insert({ source: parsed.data.source, url: parsed.data.url, observed_on: parsed.data.observedOn, total_srp_cents: parsed.data.totalSrpCents, price_cents: parsed.data.priceCents, kind: parsed.data.kind, note: parsed.data.note });
+  const { error } = await supabase.from("benchmarks").insert({ vehicle: parsed.data.vehicle, source: parsed.data.source, url: parsed.data.url, observed_on: parsed.data.observedOn, total_srp_cents: parsed.data.totalSrpCents, price_cents: parsed.data.priceCents, kind: parsed.data.kind, note: parsed.data.note });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/", "layout");
   return { ok: true, data: undefined };

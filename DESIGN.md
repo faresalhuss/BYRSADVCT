@@ -1,60 +1,41 @@
 # BYRSADVCT design
 
-The app is a financial instrument, not a brochure. Numbers are the content; everything else gets out of their way.
+Dark-first, product-grade, in the family of Vercel, Stripe, Supabase and Robinhood: near-black surfaces, hairline borders, one green accent that means "act here or this number decides", tabular figures everywhere, and motion that confirms rather than decorates. Light mode uses the same tokens.
 
 ## Type
 
-| Role | Face | Why |
-|---|---|---|
-| Display and section headings | Newsreader (serif, optical sizing) | Editorial weight without looking like a template. Used sparingly: page titles, the verdict headline. |
-| Text, labels, numbers | IBM Plex Sans | Clear at small sizes, has real tabular figures, pairs with the serif. Not Inter. |
+Geist for text and labels, Geist Mono for VINs, stock numbers and ranks. Numbers use tabular figures (`.num`) so columns line up. Scale: 11px eyebrow labels (uppercase, tracked), 13px secondary, 15px body, 17px section titles, 26px page titles, 24px and 36px metric values.
 
-Numbers always use `font-variant-numeric: tabular-nums` and are right-aligned in tables. Two decimals for money, two for percentages, three for APR when precision matters. Negatives carry a leading minus, never parentheses or color alone.
+## Color tokens (globals.css)
 
-Scale (rem): 0.75 (meta), 0.875 (body small), 1 (body), 1.125 (lead), 1.5 (section), 2 (page title), 2.75 (hero number). Line height 1.45 for text, 1.1 for numbers.
-
-## Color tokens
-
-One accent with one meaning: **verdigris** marks the thing you act on or the number that decides (links, primary button, the active tab, the headline ratio). It is never decoration.
-
-Status colors are tuned to the warm neutral palette and never the only signal; each is paired with a word or an icon.
-
-| Token | Light | Dark | Meaning |
+| Token | Dark | Light | Use |
 |---|---|---|---|
-| `--bg` | `#f5f2ec` (warm paper) | `#121416` | Page |
-| `--surface` | `#fffdf9` | `#1b1e21` | Cards, inputs |
-| `--surface-2` | `#ece7df` | `#24282c` | Table stripes, sticky bars |
-| `--ink` | `#1a1c1e` | `#eceae4` | Text |
-| `--ink-2` | `#5a5e63` | `#a6a9ad` | Secondary text |
-| `--line` | `#d8d2c7` | `#33383d` | Borders |
-| `--accent` | `#1f6f6a` | `#4fb3ab` | Action, decisive number |
-| `--accent-ink` | `#ffffff` | `#0c1211` | Text on accent |
-| `--good` | `#2f6b3a` | `#7cc287` | Strong, best in row |
-| `--caution` | `#8a5a00` | `#e0a63a` | Caution |
-| `--flag` | `#9a2f22` | `#ec7b6a` | Money being hidden |
-| `--good-bg` / `--caution-bg` / `--flag-bg` | tinted at 10% | tinted at 16% | Pills and row highlights |
+| `--bg` | `#09090b` | `#fafafa` | page |
+| `--bg-elev` | `#0f0f12` | `#ffffff` | rail, inputs |
+| `--surface` / `-2` / `-3` | `#121216` / `#18181d` / `#1f1f26` | `#ffffff` / `#f4f4f5` / `#e9e9ec` | cards, hovers, active tabs |
+| `--ink` / `-2` / `-3` | `#f4f4f5` / `#a1a1aa` / `#71717a` | `#09090b` / `#52525b` / `#71717a` | text levels |
+| `--line` / `--line-strong` | `#27272a` / `#3f3f46` | `#e4e4e7` / `#a1a1aa` | rules; field and button borders (3:1) |
+| `--accent` | `#3ecf8e` | `#0f9d63` | primary button, active nav, decisive number |
+| `--good` / `--caution` / `--flag` | green / amber / coral | darker variants | status, always paired with a word |
 
-Contrast: every text/background pair is at or above 4.5:1; large numbers at or above 3:1. Focus ring: 2px `--accent` outline with 2px offset, always visible.
+Every text pair meets 4.5:1. Field borders meet 3:1 non-text contrast. Status color is never the only signal: every pill has a word, every flag has a severity label.
 
-## Spacing and shape
+## Shape and spacing
 
-4px base. Components use 8/12/16/24/32. Page gutter 16px on phones, 24px from 640px.
+4px base. Cards 10px radius, inputs and pills 6px, hairline 1px borders, one soft shadow. Page gutter 16px on phones, 24px from 640px, 32px with the desktop rail. Tap targets are 44px (small buttons grow to 44px on touch screens).
 
-Radius is small and purposeful: 4px on inputs and pills, 8px on cards, 999px only on the status dot. No uniform heavy rounding, no gradient borders, no glass.
+## Layout
 
-Tap targets are at least 44px tall. Money inputs open the numeric keypad (`inputmode="decimal"`).
+Desktop: 240px left rail (logo, nav with icons, theme and sign-out), content to 72rem. Phone: top bar, bottom tab bar with Deals, Inquire, Compare, Trade and a More sheet (native popover) for Benchmarks, Learn and Settings. Every page starts with a `PageHeader` (crumb, title, one-line description, actions). Content sits in `Section` cards with a title and an intro sentence that says what the numbers mean.
 
 ## Motion
 
-One duration (140ms) and one easing (`cubic-bezier(0.2, 0, 0, 1)`), used for the derivation drawer opening and the sync indicator. Nothing fades up on scroll. `prefers-reduced-motion: reduce` turns every transition off.
+Durations 120 / 200 / 320ms, one easing (`cubic-bezier(0.2, 0, 0, 1)`) and an out-expo for entrances. Cards rise 6px on mount with a 40ms stagger; hover lifts 1px and brightens the border; primary buttons glow on hover and press 1px; the summary bar numbers tick when they change; skeletons shimmer. `prefers-reduced-motion` turns all of it off.
 
-## Layout rules
+## Explaining things
 
-- The sticky summary bar on a deal shows three numbers only: all-in % of total SRP, out the door, open flags.
-- Progressive disclosure: every number on screen is a button that opens its derivation (formula, inputs, sources).
-- Compare: label column frozen, deals scroll horizontally, best value per row marked with color and a check mark.
-- Empty states say the next action in plain words, with the one button that does it.
+Every unfamiliar term renders as a dotted `Term` that opens a native popover with "what it is", "how dealers use it" and "what to ask", and links to the Learn page. Each section's intro sentence states the order of negotiation (price, trade, financing) and what the figures mean. Unknowns read "not yet quoted", never a dash or a zero.
 
 ## Copy
 
-Plain, specific, no taglines, no exclamation points, no em dashes, no filler. "Not yet quoted" instead of a blank or a zero.
+Plain and specific. No taglines, no exclamation points, no em dashes, no filler. Empty states name the next action and show its button.

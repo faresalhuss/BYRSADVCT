@@ -1,4 +1,6 @@
-import type { CompareMode, CompareResult, CompareRow, DealReport, Unit } from "./types";
+import type { CompareMode, CompareResult, CompareRow, DealReport, OutsideOffer, TaxRule, TradeProfile, Unit } from "./types";
+import { daysBetween, tradeCreditApplies } from "./tax";
+import { mulRate } from "./money";
 
 function row(key: string, label: string, unit: Unit, values: (number | null)[], lowerIsBetter: boolean): CompareRow {
   let bestIndex: number | null = null;
@@ -60,4 +62,83 @@ export function compareDeals(reports: DealReport[], mode: CompareMode): CompareR
     : [];
 
   return { mode, dealIds: reports.map((r) => r.id), names: reports.map((r) => r.name), rows, ranking, push };
+}
+
+
+/* ---------- The trade vehicle: every way to dispose of it, ranked ---------- */
+
+export interface TradeRoute {
+  key: string;
+  kind: "dealer" | "outside";
+  label: string;
+  /** Allowance or cash offer. */
+  grossCents: number | null;
+  /** Tax credit worth (dealer routes only). */
+  taxValueCents: number | null;
+  /** What the route nets you: allowance + tax credit, or the outside cash. */
+  netCents: number | null;
+  expiresOn: string | null;
+  expired: boolean;
+  contingent: boolean;
+  dealId: string | null;
+  rank: number | null;
+}
+
+export function compareTradeRoutes(reports: DealReport[], trade: TradeProfile, rule: TaxRule, today: string): TradeRoute[] {
+  const applies = tradeCreditApplies(rule, trade);
+  const routes: TradeRoute[] = [];
+  for (const r of reports) {
+    const a = r.trade.allowance.value;
+    if (a === null) continue;
+    const tv = r.trade.taxValue.value ?? (applies ? mulRate(a, rule.rate, rule.ratePrecision) : 0);
+    routes.push({ key: `deal:${r.id}`, kind: "dealer", label: `Trade to ${r.name}`, grossCents: a, taxValueCents: tv, netCents: a + tv, expiresOn: null, expired: false, contingent: false, dealId: r.id, rank: null });
+  }
+  for (const o of trade.outsideOffers as OutsideOffer[]) {
+    const expired = o.expiresOn !== null && daysBetween(today, o.expiresOn) < 0;
+    routes.push({ key: `outside:${o.id}`, kind: "outside", label: `Sell to ${o.source}`, grossCents: o.cents, taxValueCents: 0, netCents: o.cents, expiresOn: o.expiresOn, expired, contingent: o.contingentOnInspection, dealId: null, rank: null });
+  }
+  const live = routes.filter((r) => !r.expired && r.netCents !== null).sort((a, b) => b.netCents! - a.netCents!);
+  live.forEach((r, i) => (r.rank = i + 1));
+  return routes.sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || (b.netCents ?? 0) - (a.netCents ?? 0));
+}
+
+/* ---------- Overall: each purchase deal with its best trade route ---------- */
+
+export interface OverallRow {
+  dealId: string;
+  name: string;
+  complete: boolean;
+  allInCents: number | null;
+  /** Net cost if the trade goes to this dealer. */
+  netWithTradeCents: number | null;
+  /** Net cost if the trade is sold to the best unexpired outside offer. */
+  netOutsideCents: number | null;
+  bestRoute: "trade" | "outside" | null;
+  bestNetCents: number | null;
+  rank: number | null;
+  /** How much this deal's best net cost trails the overall best. */
+  gapToBestCents: number | null;
+}
+
+export function compareOverall(reports: DealReport[]): OverallRow[] {
+  const rows: OverallRow[] = reports.map((r) => {
+    const w = r.trade.netCostWithTrade.value;
+    const o = r.trade.netCostOutside.value;
+    let bestRoute: OverallRow["bestRoute"] = null;
+    let best: number | null = null;
+    if (w !== null && (o === null || w <= o)) {
+      bestRoute = "trade";
+      best = w;
+    } else if (o !== null) {
+      bestRoute = "outside";
+      best = o;
+    }
+    return { dealId: r.id, name: r.name, complete: r.complete && best !== null, allInCents: r.price.allIn.value, netWithTradeCents: w, netOutsideCents: o, bestRoute, bestNetCents: best, rank: null, gapToBestCents: null };
+  });
+  const ranked = rows.filter((r) => r.complete).sort((a, b) => a.bestNetCents! - b.bestNetCents!);
+  ranked.forEach((r, i) => {
+    r.rank = i + 1;
+    r.gapToBestCents = r.bestNetCents! - ranked[0]!.bestNetCents!;
+  });
+  return rows.sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
 }

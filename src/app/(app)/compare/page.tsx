@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { compareDeals, formatApr, formatCents, formatPercent, type CompareMode, type CompareRow } from "@/engine";
+import { Icon } from "@/components/icons";
+import { Term } from "@/components/term";
+import { EmptyState, Explain, PageHeader, Section } from "@/components/ui";
 import { evaluate, getEvalContext, listDeals } from "@/db/queries";
+import { compareDeals, compareOverall, compareTradeRoutes, formatApr, formatCents, formatPercent, type CompareMode, type CompareRow } from "@/engine";
 import { DealPicker } from "./deal-picker";
 
 export const metadata: Metadata = { title: "Compare" };
 
+type View = "purchase" | "trade" | "overall";
+
 export default function ComparePage(props: PageProps<"/compare">) {
   return (
     <main>
-      <h1 className="text-3xl">Compare</h1>
-      <p className="mt-1 text-sm text-ink-2">Two to six deals, normalized. Price alone first, then with your trade.</p>
-      <Suspense fallback={<p className="mt-4 text-ink-2">Loading</p>}>
+      <PageHeader title="Compare" description="The 4Runner deals on price alone, the Tesla's exit routes on their own, and the best combination of the two." />
+      <Suspense fallback={<div className="skeleton h-64" aria-hidden="true" />}>
         <Compare searchParams={props.searchParams} />
       </Suspense>
     </main>
@@ -35,44 +39,177 @@ function cell(row: CompareRow, v: number | null): string {
 
 async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["searchParams"] }) {
   const sp = await searchParams;
+  const view: View = sp.view === "trade" ? "trade" : sp.view === "overall" ? "overall" : "purchase";
   const mode: CompareMode = sp.mode === "with_trade" ? "with_trade" : "price_only";
   const idsParam = typeof sp.ids === "string" ? sp.ids : Array.isArray(sp.ids) ? sp.ids.join(",") : "";
   const requested = idsParam.split(",").map((s) => s.trim()).filter(Boolean);
   const [deals, ctx] = await Promise.all([listDeals(), getEvalContext()]);
-  const selected = requested.length > 0 ? deals.filter((d) => requested.includes(d.deal.id)) : deals.slice(0, 6);
-  const reports = selected.map((d) => evaluate(d, ctx));
+  const allReports = deals.map((d) => evaluate(d, ctx));
+  const selectedIds = requested.length > 0 ? requested : deals.slice(0, 6).map((d) => d.deal.id);
+  const reports = allReports.filter((r) => selectedIds.includes(r.id));
+  const q = (v: View, m: CompareMode = mode) => `/compare?view=${v}&mode=${m}${requested.length ? `&ids=${requested.join(",")}` : ""}`;
+
+  const Tabs = (
+    <nav className="mb-4 flex gap-1 rounded-md border border-line bg-surface p-1" aria-label="What to compare">
+      {(
+        [
+          ["purchase", "4Runner deals"],
+          ["trade", "Tesla routes"],
+          ["overall", "Best overall"],
+        ] as const
+      ).map(([v, label]) => (
+        <Link key={v} href={q(v)} aria-current={view === v ? "page" : undefined} className={`tap flex flex-1 items-center justify-center rounded-sm px-3 text-sm font-medium ${view === v ? "bg-surface-3 text-ink" : "text-ink-2 hover:text-ink"}`}>
+          {label}
+        </Link>
+      ))}
+    </nav>
+  );
+
+  if (view === "trade") {
+    const routes = compareTradeRoutes(allReports, ctx.trade.profile, ctx.settingsBundle.taxRule, ctx.today);
+    return (
+      <>
+        {Tabs}
+        <Section id="routes" title="Where the Tesla nets the most" intro="Every dealer allowance (plus its 7% tax credit) against every outside offer, independent of which 4Runner you buy.">
+          <Explain>
+            A dealer allowance reduces Georgia TAVT by 7% of the allowance, so it is worth more than the same cash from an outside buyer. The <Term k="break_even">break-even</Term> allowance is the outside offer divided by 1.07.
+          </Explain>
+          {routes.length === 0 ? (
+            <p className="mt-3 text-sm text-ink-2">
+              No routes yet. Add outside offers on the{" "}
+              <Link href="/trade" className="underline">
+                Trade page
+              </Link>{" "}
+              and trade allowances on your deals.
+            </p>
+          ) : (
+            <div className="-mx-4 mt-3 overflow-x-auto px-4">
+              <table className="table min-w-[520px]">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Route</th>
+                    <th className="text-right">Gross</th>
+                    <th className="text-right">Tax credit</th>
+                    <th className="text-right">Nets you</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {routes.map((r) => (
+                    <tr key={r.key} className={`row-hover ${r.rank === 1 ? "font-medium" : ""} ${r.expired ? "opacity-60" : ""}`}>
+                      <td className="mono">{r.rank === null ? (r.expired ? "expired" : "") : `#${r.rank}`}</td>
+                      <td>
+                        {r.dealId ? (
+                          <Link href={`/deals/${r.dealId}`} className="underline">
+                            {r.label}
+                          </Link>
+                        ) : (
+                          r.label
+                        )}
+                      </td>
+                      <td className="num text-right">{formatCents(r.grossCents)}</td>
+                      <td className="num text-right">{r.kind === "dealer" ? formatCents(r.taxValueCents) : "none"}</td>
+                      <td className={`num text-right ${r.rank === 1 ? "text-good" : ""}`}>
+                        {formatCents(r.netCents)}
+                        {r.rank === 1 && <Icon.Check size={14} className="ml-1 inline" />}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Section>
+      </>
+    );
+  }
+
+  if (view === "overall") {
+    const rows = compareOverall(allReports);
+    return (
+      <>
+        {Tabs}
+        <Section id="overall" title="Best overall: each 4Runner deal with its best Tesla route" intro="Net cost = all-in dealer price + government fees + tax, minus what the Tesla brings in on the better route for that deal.">
+          {rows.length === 0 ? (
+            <EmptyState title="No deals yet." />
+          ) : (
+            <div className="-mx-4 overflow-x-auto px-4">
+              <table className="table min-w-[640px]">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Deal</th>
+                    <th className="text-right">All-in</th>
+                    <th className="text-right">Net, trade to dealer</th>
+                    <th className="text-right">Net, sell outside</th>
+                    <th>Best route</th>
+                    <th className="text-right">Best net cost</th>
+                    <th className="text-right">Gap to #1</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.dealId} className={`row-hover ${r.rank === 1 ? "font-medium" : ""}`}>
+                      <td className="mono">{r.rank === null ? "incomplete" : `#${r.rank}`}</td>
+                      <td>
+                        <Link href={`/deals/${r.dealId}`} className="underline">
+                          {r.name}
+                        </Link>
+                      </td>
+                      <td className="num text-right">{formatCents(r.allInCents)}</td>
+                      <td className="num text-right">{formatCents(r.netWithTradeCents)}</td>
+                      <td className="num text-right">{formatCents(r.netOutsideCents)}</td>
+                      <td>{r.bestRoute === "trade" ? "Trade to this dealer" : r.bestRoute === "outside" ? "Sell outside" : "unknown"}</td>
+                      <td className={`num text-right ${r.rank === 1 ? "text-good" : ""}`}>{formatCents(r.bestNetCents)}</td>
+                      <td className="num text-right text-ink-2">{r.gapToBestCents === null ? "" : r.gapToBestCents === 0 ? "best" : `+${formatCents(r.gapToBestCents)}`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a href="/api/export/advisor?scope=both" className="btn btn-sm" download>
+              <Icon.Download size={14} /> Export everything for an AI advisor
+            </a>
+          </div>
+        </Section>
+      </>
+    );
+  }
+
   const canCompare = reports.length >= 2 && reports.length <= 6;
   const result = canCompare ? compareDeals(reports, mode) : null;
-  const query = (m: CompareMode) => `/compare?mode=${m}${requested.length ? `&ids=${requested.join(",")}` : ""}`;
-
   return (
-    <div className="mt-4">
-      <DealPicker deals={deals.map((d) => ({ id: d.deal.id, name: d.deal.dealership_name }))} selected={selected.map((d) => d.deal.id)} mode={mode} />
+    <>
+      {Tabs}
+      <DealPicker deals={deals.map((d) => ({ id: d.deal.id, name: d.deal.dealership_name }))} selected={selectedIds} mode={mode} />
       {!canCompare ? (
-        <div className="card mt-4 p-6">
-          <p className="font-medium">{deals.length < 2 ? "You need at least two deals to compare." : "Pick two to six deals above."}</p>
-          {deals.length < 2 && (
-            <p className="mt-1 text-ink-2">
-              <Link href="/deals/new" className="text-accent underline">
-                Add another deal
-              </Link>
-            </p>
-          )}
+        <div className="mt-4">
+          <EmptyState
+            title={deals.length < 2 ? "You need at least two deals to compare." : "Pick two to six deals above."}
+            action={
+              deals.length < 2 && (
+                <Link href="/deals/new" className="btn btn-primary">
+                  Add another deal
+                </Link>
+              )
+            }
+          />
         </div>
       ) : (
         <>
           <nav className="mt-4 flex gap-2" aria-label="Comparison mode">
-            <Link href={query("price_only")} aria-current={mode === "price_only" ? "page" : undefined} className={`btn btn-sm ${mode === "price_only" ? "btn-primary" : ""}`}>
+            <Link href={q("purchase", "price_only")} aria-current={mode === "price_only" ? "page" : undefined} className={`btn btn-sm ${mode === "price_only" ? "btn-primary" : ""}`}>
               Price only
             </Link>
-            <Link href={query("with_trade")} aria-current={mode === "with_trade" ? "page" : undefined} className={`btn btn-sm ${mode === "with_trade" ? "btn-primary" : ""}`}>
+            <Link href={q("purchase", "with_trade")} aria-current={mode === "with_trade" ? "page" : undefined} className={`btn btn-sm ${mode === "with_trade" ? "btn-primary" : ""}`}>
               With trade
             </Link>
           </nav>
 
-          <section className="card mt-4 p-4">
-            <h2 className="text-lg">{mode === "price_only" ? "Ranked on all-in dealer price, trade excluded" : "Ranked on net cost after trading to each dealer"}</h2>
-            <ol className="mt-2 text-sm">
+          <Section id="ranking" title={mode === "price_only" ? "Ranked on all-in dealer price, trade excluded" : "Ranked on net cost after trading to each dealer"} className="mt-4">
+            <ol className="text-sm">
               {result!.ranking
                 .slice()
                 .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
@@ -80,39 +217,35 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
                   const name = result!.names[result!.dealIds.indexOf(r.dealId)];
                   const push = result!.push.find((p) => p.dealId === r.dealId);
                   return (
-                    <li key={r.dealId} className="flex flex-wrap items-baseline justify-between gap-2 border-t border-line/70 py-2">
+                    <li key={r.dealId} className="flex flex-wrap items-baseline justify-between gap-2 border-t border-line py-2 first:border-t-0">
                       <span>
-                        <span className="num mr-2 text-ink-2">{r.rank === null ? "unranked" : `#${r.rank}`}</span>
+                        <span className="mono mr-2 text-ink-3">{r.rank === null ? "unranked" : `#${r.rank}`}</span>
                         <Link href={`/deals/${r.dealId}`} className="underline">
                           {name}
                         </Link>
-                        {!r.complete && <span className="ml-2 pill pill-info">incomplete</span>}
+                        {!r.complete && <span className="ml-2 pill pill-info pill-plain">incomplete</span>}
                       </span>
                       <span className="num">
                         {formatCents(r.metricCents)}
-                        {push && push.gapCents > 0 && (
-                          <span className="ml-2 text-flag">
-                            push down by {formatCents(push.gapCents)} to tie #1
-                          </span>
-                        )}
+                        {push && push.gapCents > 0 && <span className="ml-2 text-flag">push down by {formatCents(push.gapCents)} to tie #1</span>}
                         {r.rank === 1 && <span className="ml-2 pill pill-good">best</span>}
                       </span>
                     </li>
                   );
                 })}
             </ol>
-          </section>
+          </Section>
 
           <div className="card mt-4 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="table">
                 <thead>
                   <tr className="bg-surface-2">
-                    <th scope="col" className="sticky left-0 z-10 border-r border-line bg-surface-2 px-3 py-2 text-left font-medium">
+                    <th scope="col" className="sticky left-0 z-10 border-r border-line bg-surface-2">
                       Line
                     </th>
                     {result!.names.map((n, i) => (
-                      <th key={result!.dealIds[i]} scope="col" className="min-w-36 px-3 py-2 text-right font-medium">
+                      <th key={result!.dealIds[i]} scope="col" className="min-w-36 text-right">
                         <Link href={`/deals/${result!.dealIds[i]}`} className="underline">
                           {n}
                         </Link>
@@ -122,14 +255,14 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
                 </thead>
                 <tbody>
                   {result!.rows.map((row) => (
-                    <tr key={row.key} className="border-t border-line/70">
-                      <th scope="row" className="sticky left-0 z-10 border-r border-line bg-surface px-3 py-2 text-left font-normal">
+                    <tr key={row.key} className="row-hover">
+                      <th scope="row" className="sticky left-0 z-10 border-r border-line bg-surface text-left font-normal normal-case tracking-normal text-ink">
                         {row.label}
                       </th>
                       {row.values.map((v, i) => {
                         const best = row.bestIndex === i;
                         return (
-                          <td key={i} className={`num px-3 py-2 text-right ${best ? "bg-good-bg font-medium text-good" : ""} ${v === null ? "text-ink-2" : ""}`}>
+                          <td key={i} className={`num text-right ${best ? "bg-good-bg font-medium text-good" : ""} ${v === null ? "text-ink-3" : ""}`}>
                             {cell(row, v)}
                             {best && (
                               <>
@@ -150,6 +283,6 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
           </div>
         </>
       )}
-    </div>
+    </>
   );
 }

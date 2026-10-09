@@ -1,4 +1,6 @@
 import { computeFlags, vinDecodeMismatches } from "./flags";
+import { analyzeLease } from "./lease";
+import { analyzePrograms, programLines } from "./programs";
 import { analyzeFinancing } from "./financing";
 import { derived, input, sumKnown } from "./money";
 import { analyzePrice } from "./price";
@@ -26,7 +28,13 @@ export function missingFields(d: DealInput): string[] {
   return missing;
 }
 
-export function evaluateDeal(d: DealInput): DealReport {
+export function evaluateDeal(dealInput: DealInput): DealReport {
+  // Rebate programs ticked on this deal become after-price manufacturer rebate lines.
+  const extraLines = programLines(dealInput.offer, dealInput.settings);
+  let d: DealInput = extraLines.length > 0 ? { ...dealInput, offer: { ...dealInput.offer, lines: [...dealInput.offer.lines, ...extraLines] } } : dealInput;
+  if (d.offer.dealType === "lease" && d.offer.sellingPriceCents === null && d.offer.lease?.agreedValueCents != null) {
+    d = { ...d, offer: { ...d.offer, sellingPriceCents: d.offer.lease.agreedValueCents } };
+  }
   const sticker = analyzeSticker(d.sticker);
   const tax = auditTax(d.offer, d.sticker, d.taxRule, d.trade);
 
@@ -111,8 +119,28 @@ export function evaluateDeal(d: DealInput): DealReport {
   const financing = analyzeFinancing({ offer: d.offer, settings: d.settings });
   const revisionDiff = d.previousOffer ? diffOffers(d.previousOffer, d.offer, d.settings) : null;
 
-  const flags = computeFlags({ input: d, sticker, price, tax: { ...tax, rule: ruleSummary(d), correctedTotal, correctedBalance, correctedBalanceNoAddons }, trade, financing, revisionDiff });
+  const programs = analyzePrograms(d.offer, d.settings, d.today);
+  const dealType: "purchase" | "lease" = d.offer.dealType === "lease" ? "lease" : "purchase";
+  const lease = analyzeLease(
+    dealType === "lease" && d.offer.lease
+      ? {
+          lease: d.offer.lease,
+          residualBasisCents: sticker.totalSrp.value,
+          purchaseSellingPriceCents: d.offer.sellingPriceCents,
+          taxRule: d.taxRule.lease ?? { name: `${d.taxRule.name} (lease)`, rate: d.taxRule.rate, basis: "depreciation", includesCapReductions: true, sourceUrl: d.taxRule.sourceUrl, verifiedOn: d.taxRule.verifiedOn, verified: false },
+          settings: d.settings,
+        }
+      : null,
+  );
+  const flags = [...computeFlags({ input: d, sticker, price, tax: { ...tax, rule: ruleSummary(d), correctedTotal, correctedBalance, correctedBalanceNoAddons }, trade, financing, revisionDiff }), ...programs.flags, ...lease.flags];
   const missing = missingFields(d);
+  if (dealType === "lease") {
+    const L = d.offer.lease;
+    if (!L || L.agreedValueCents === null) missing.push("lease agreed value");
+    if (!L || L.termMonths === null) missing.push("lease term");
+    if (!L || L.moneyFactor === null) missing.push("money factor");
+    if (!L || (L.residualCents === null && L.residualPercent === null)) missing.push("residual");
+  }
   const verdict = computeVerdict(price.allInRatio.value, flags, d.settings, missing);
   const target = buildTarget({
     targetRatio: d.settings.thresholds.strongRatio,
@@ -139,6 +167,9 @@ export function evaluateDeal(d: DealInput): DealReport {
     verdict,
     target,
     revisionDiff,
+    dealType,
+    lease,
+    programs: { applied: programs.applied, missing: programs.missing, appliedTotal: programs.appliedTotal },
   };
 }
 

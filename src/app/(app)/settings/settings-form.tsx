@@ -22,6 +22,9 @@ export function SettingsForm({ initial, ruleOptions }: { initial: Form; ruleOpti
   const [beats, setBeats] = useState(pctText(initial.thresholds.beatsBestRatio));
   const [pre, setPre] = useState(pctText(initial.preApprovalApr));
   const [junk, setJunk] = useState(initial.junkFeeList.join("\n"));
+  const [mf, setMf] = useState(initial.lease.buyRateMoneyFactor === null ? "" : initial.lease.buyRateMoneyFactor.toFixed(5));
+  const [acq, setAcq] = useState(initial.lease.standardAcquisitionFeeCents === null ? "" : (initial.lease.standardAcquisitionFeeCents / 100).toFixed(2));
+  const [disp, setDisp] = useState(initial.lease.standardDispositionFeeCents === null ? "" : (initial.lease.standardDispositionFeeCents / 100).toFixed(2));
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -36,10 +39,12 @@ export function SettingsForm({ initial, ruleOptions }: { initial: Form; ruleOpti
           setMsg("Thresholds must be percentages.");
           return;
         }
+        const money = (t: string) => (t.trim() === "" || !Number.isFinite(Number(t.replace(/[$,\s]/g, ""))) ? null : Math.round(Number(t.replace(/[$,\s]/g, "")) * 100));
         const payload: Form = {
           ...form,
           thresholds: { ...form.thresholds, strongRatio: s, beatsBestRatio: b },
           preApprovalApr: pctParse(pre),
+          lease: { ...form.lease, buyRateMoneyFactor: mf.trim() === "" || !Number.isFinite(Number(mf)) ? null : Number(mf), standardAcquisitionFeeCents: money(acq), standardDispositionFeeCents: money(disp) },
           junkFeeList: junk
             .split("\n")
             .map((x) => x.trim())
@@ -84,6 +89,34 @@ export function SettingsForm({ initial, ruleOptions }: { initial: Form; ruleOpti
         <span className="text-sm font-medium">Junk-fee list (one per line, matched against line labels)</span>
         <textarea className="field min-h-32 py-2" value={junk} onChange={(e) => setJunk(e.target.value)} />
       </label>
+
+      <fieldset className="flex flex-col gap-2 rounded-md border border-line p-3">
+        <legend className="px-1 text-sm font-medium">Lease program (Southeast Toyota Finance)</legend>
+        <p className="text-xs text-ink-3">Acquisition $695 and disposition $350 are from the October 2026 SET lease offer. SETF does not publish its buy rate; ask the dealer for it in writing and enter it here so markups show up.</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Buy-rate money factor</span>
+            <input className="field num" inputMode="decimal" placeholder="0.00279" value={mf} onChange={(e) => setMf(e.target.value)} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Standard acquisition fee ($)</span>
+            <input className="field num" inputMode="decimal" value={acq} onChange={(e) => setAcq(e.target.value)} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Standard disposition fee ($)</span>
+            <input className="field num" inputMode="decimal" value={disp} onChange={(e) => setDisp(e.target.value)} />
+          </label>
+        </div>
+        {form.lease.residuals.length > 0 && (
+          <ul className="text-xs text-ink-2">
+            {form.lease.residuals.map((r, i) => (
+              <li key={i}>
+                Residual {Math.round(r.percent * 100)}% at {r.termMonths} months / {r.milesPerYear.toLocaleString()} mi ({r.source}, {r.asOf})
+              </li>
+            ))}
+          </ul>
+        )}
+      </fieldset>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium">Published promo rates</legend>

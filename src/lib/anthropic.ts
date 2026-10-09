@@ -66,6 +66,26 @@ export const extractionSchema = z.object({
     name: z.string().nullable(),
     salesperson: z.string().nullable(),
     date: z.string().nullable(),
+    addressLine: z.string().nullable(),
+    city: z.string().nullable(),
+    state: z.string().nullable(),
+    zip: z.string().nullable(),
+    phone: z.string().nullable(),
+    website: z.string().nullable(),
+  }),
+  lease: z.object({
+    present: z.boolean(),
+    termMonths: z.number().int().nullable(),
+    milesPerYear: z.number().int().nullable(),
+    agreedValueDollars: z.number().nullable(),
+    capReductionDollars: z.number().nullable(),
+    acquisitionFeeDollars: z.number().nullable(),
+    residualDollars: z.number().nullable(),
+    residualPercent: z.number().nullable(),
+    moneyFactor: z.number().nullable(),
+    monthlyPaymentDollars: z.number().nullable(),
+    dueAtSigningDollars: z.number().nullable(),
+    dispositionFeeDollars: z.number().nullable(),
   }),
   uncertainties: z.array(z.string()),
 });
@@ -77,7 +97,32 @@ Rules:
 - Window sticker groups: base = base MSRP; factory_option = factory installed options and packages (including $0 items like emissions); distributor_option = distributor or port installed accessories (for example Southeast Toyota or Gulf States Toyota add-ons); dph = delivery, processing and handling (destination). Total SRP is the bottom line.
 - Worksheet categories: dealer_fee = doc fee, ELT, electronic filing, dealer services; dealer_addon = anything not on the sticker (protection packages, nitrogen, etch, carbon offset programs, market adjustments); gov_fee = title, registration, tag, lemon law fee; tax = any sales tax, TAVT or "state taxes and fees" line; manufacturer_rebate and conditional_rebate = factory incentives; dealer_discount = a printed discount line; other = anything else.
 - Payment grids: one entry per cell, with the term in months, the cash down for that column, and the monthly payment.
+- If the document is a lease worksheet, set lease.present true and fill the lease fields (agreed value, cap reduction, residual, money factor, term, miles, payment, due at signing). Money factor is a decimal like 0.00279; if only an APR is printed, divide it by 2400.
+- When several documents are given (sticker, worksheet, listing screenshot), merge them into one record: vehicle and dealership details from any of them, sticker lines from the sticker, offer lines and grid from the worksheet. Never duplicate a line that appears on two documents.
 - Fill fields that are not on the document with null. Amounts are dollars with cents, no currency symbols.`;
+
+/** Reads several documents in one call and returns one merged extraction. */
+export async function extractDocuments(docs: { bytes: Buffer; mime: string; name: string }[]): Promise<Extraction> {
+  const client = new Anthropic({ timeout: 55_000, maxRetries: 1 });
+  const blocks: Anthropic.MessageParam["content"] = [];
+  docs.forEach((d, i) => {
+    const data = d.bytes.toString("base64");
+    blocks.push({ type: "text", text: `Document ${i + 1} of ${docs.length}: ${d.name}` });
+    if (d.mime === "application/pdf") blocks.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data } });
+    else blocks.push({ type: "image", source: { type: "base64", media_type: d.mime as "image/jpeg" | "image/png" | "image/webp", data } });
+  });
+  blocks.push({ type: "text", text: "Transcribe these documents into one merged record for the same vehicle and dealer." });
+  const response = await client.messages.parse({
+    model: MODEL,
+    max_tokens: 16_000,
+    system: SYSTEM,
+    messages: [{ role: "user", content: blocks }],
+    output_config: { format: zodOutputFormat(extractionSchema) },
+  });
+  if (response.stop_reason === "refusal") throw new Error("The model declined to read these documents.");
+  if (!response.parsed_output) throw new Error("The model's answer did not match the expected structure.");
+  return response.parsed_output;
+}
 
 export async function extractDocument(input: { bytes: Buffer; mime: string; kindHint: "sticker" | "worksheet" | "unknown" }): Promise<Extraction> {
   const client = new Anthropic({ timeout: 55_000, maxRetries: 1 });

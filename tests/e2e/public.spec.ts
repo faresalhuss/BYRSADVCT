@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("unauthenticated visit to the deals list redirects to sign-in", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/login/);
-  await expect(page.getByRole("heading", { name: "BYRSADVCT" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in", level: 1 })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });

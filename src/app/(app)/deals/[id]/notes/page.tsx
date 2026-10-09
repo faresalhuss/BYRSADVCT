@@ -28,7 +28,7 @@ async function Notes({ params }: { params: PageProps<"/deals/[id]/notes">["param
           {d.deal.dealership_name}
         </Link>
       </p>
-      <h1 className="text-3xl">Notes</h1>
+      <h1 className="mt-1">Notes</h1>
       <p className="mt-1 text-sm text-ink-2">What was said, by whom, and whether it was verbal or in writing.</p>
       <NoteForm dealId={id} defaultWho={d.deal.salesperson} />
       {notes.length === 0 ? (

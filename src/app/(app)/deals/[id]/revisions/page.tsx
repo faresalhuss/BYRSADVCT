@@ -27,7 +27,7 @@ async function Revisions({ params }: { params: PageProps<"/deals/[id]/revisions"
           {d.deal.dealership_name}
         </Link>
       </p>
-      <h1 className="text-3xl">Revisions</h1>
+      <h1 className="mt-1">Revisions</h1>
       <p className="mt-1 text-sm text-ink-2">Every saved offer, diffed line by line against the one before it.</p>
       <ol className="mt-4 flex flex-col gap-4">
         {revisions.map((rev, i) => {

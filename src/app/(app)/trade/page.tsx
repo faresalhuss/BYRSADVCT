@@ -1,20 +1,22 @@
-import { ConfirmForm } from "@/components/confirm-form";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { ConfirmForm } from "@/components/confirm-form";
+import { Money } from "@/components/money";
+import { Term } from "@/components/term";
+import { Explain, PageHeader, Section } from "@/components/ui";
 import { deleteOutsideOffer } from "@/db/actions";
-import { getSettingsBundle, getTradeBundle } from "@/db/queries";
-import { daysBetween, formatCents, divByOnePlusRate, tradeCreditApplies } from "@/engine";
+import { evaluate, getEvalContext, getSettingsBundle, getTradeBundle, listDeals } from "@/db/queries";
+import { compareTradeRoutes, daysBetween, divByOnePlusRate, formatCents, tradeCreditApplies } from "@/engine";
 import { formatDate, todayIso } from "@/lib/dates";
-import { OutsideOfferForm, TradeProfileForm } from "./forms";
+import { OutsideOfferForm, OutsideOfferItem, TradeProfileForm } from "./forms";
 
 export const metadata: Metadata = { title: "Trade" };
 
 export default function TradePage() {
   return (
     <main>
-      <h1 className="text-3xl">Trade</h1>
-      <p className="mt-1 text-sm text-ink-2">Your payoff, and every outside offer you have in hand. Each deal is measured against the best unexpired one.</p>
-      <Suspense fallback={<p className="mt-4 text-ink-2">Loading</p>}>
+      <PageHeader title="Trade" description="The Tesla: payoff, every outside offer in hand, and how each dealer's allowance stacks up against them after the tax credit." />
+      <Suspense fallback={<div className="skeleton h-64" aria-hidden="true" />}>
         <Trade />
       </Suspense>
     </main>
@@ -22,54 +24,96 @@ export default function TradePage() {
 }
 
 async function Trade() {
-  const [t, s] = await Promise.all([getTradeBundle(), getSettingsBundle()]);
+  const [t, s, deals, ctx] = await Promise.all([getTradeBundle(), getSettingsBundle(), listDeals(), getEvalContext()]);
   const today = todayIso();
   const rate = s.taxRule.rate;
+  const applies = tradeCreditApplies(s.taxRule, t.profile);
+  const reports = deals.map((d) => evaluate(d, ctx));
+  const routes = compareTradeRoutes(reports, t.profile, s.taxRule, today);
   return (
-    <div className="mt-4 grid gap-4 lg:grid-cols-2">
-      <section className="card p-4">
-        <h2 className="text-lg">Trade vehicle and payoff</h2>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Section id="routes" title="Every way to dispose of the Tesla, ranked" intro="Dealer allowances count their tax credit; outside offers do not get one." className="lg:col-span-2">
+        {routes.length === 0 ? (
+          <p className="text-sm text-ink-2">Add outside offers below and trade allowances on your deals to rank the routes.</p>
+        ) : (
+          <div className="-mx-4 overflow-x-auto px-4">
+            <table className="table min-w-[560px]">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Route</th>
+                  <th className="text-right">Allowance or offer</th>
+                  <th className="text-right">Tax credit</th>
+                  <th className="text-right">Nets you</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {routes.map((r) => (
+                  <tr key={r.key} className={`row-hover ${r.rank === 1 ? "font-medium" : ""}`}>
+                    <td className="mono">{r.rank === null ? "" : `#${r.rank}`}</td>
+                    <td>{r.label}</td>
+                    <td className="num text-right">{formatCents(r.grossCents)}</td>
+                    <td className="num text-right">{r.kind === "dealer" ? formatCents(r.taxValueCents) : "none"}</td>
+                    <td className={`num text-right ${r.rank === 1 ? "text-good" : ""}`}>{formatCents(r.netCents)}</td>
+                    <td className="text-xs text-ink-3">
+                      {r.expired && <span className="pill pill-flag pill-plain">expired</span>}
+                      {!r.expired && r.expiresOn && `expires ${formatDate(r.expiresOn)}`}
+                      {r.contingent && <span className="ml-2 pill pill-info pill-plain">inspection</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
+
+      <Section id="profile" title="Trade vehicle and payoff">
+        <Explain>
+          <Term k="equity">Equity</Term> is allowance minus payoff. Get a payoff letter with a good-through date; a statement balance is not a payoff.
+        </Explain>
         <TradeProfileForm initial={{ payoffCents: t.profile.payoffCents, payoffGoodThrough: t.profile.payoffGoodThrough, vinAndOwnerRecorded: t.profile.vinAndOwnerRecorded, vehicle: t.vehicle }} />
-      </section>
-      <section className="card p-4">
-        <h2 className="text-lg">Outside offers</h2>
+      </Section>
+
+      <Section id="offers" title="Outside offers" intro="CarMax, Carvana, Tesla trade-in, private buyers. Each one sets the floor for the dealer's allowance.">
         <OutsideOfferForm />
         {t.outsideOffers.length === 0 ? (
-          <p className="mt-4 text-sm text-ink-2">No outside offers yet. Add the CarMax, Carvana or private-party numbers you have.</p>
+          <p className="mt-4 text-sm text-ink-2">No outside offers yet.</p>
         ) : (
-          <ul className="mt-4 flex flex-col gap-2">
+          <ul className="mt-4 flex flex-col">
             {t.outsideOffers.map((o) => {
               const expired = o.expiresOn !== null && daysBetween(today, o.expiresOn) < 0;
               return (
-                <li key={o.id} className="flex flex-wrap items-start justify-between gap-2 border-t border-line/70 py-2 text-sm">
-                  <div>
+                <OutsideOfferItem key={o.id} offer={{ id: o.id, source: o.source, cents: o.cents, expiresOn: o.expiresOn ?? "", contingentOnInspection: o.contingentOnInspection, note: o.note ?? "" }}>
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium">
-                      {o.source} <span className="num">{formatCents(o.cents)}</span>
-                      {expired && <span className="ml-2 pill pill-flag">expired</span>}
-                      {o.contingentOnInspection && <span className="ml-2 pill pill-info">pending inspection</span>}
+                      {o.source} <Money cents={o.cents} className="ml-1" />
+                      {expired && <span className="ml-2 pill pill-flag pill-plain">expired</span>}
+                      {o.contingentOnInspection && <span className="ml-2 pill pill-info pill-plain">pending inspection</span>}
                     </p>
                     <p className="text-ink-2">
                       {o.expiresOn ? `Expires ${formatDate(o.expiresOn)}` : "No expiry"}
                       {!expired && (
                         <>
                           {" "}
-                          · break-even dealer allowance <span className="num">{formatCents(tradeCreditApplies(s.taxRule, t.profile) ? divByOnePlusRate(o.cents, rate, s.taxRule.ratePrecision) : o.cents)}</span>
+                          · <Term k="break_even">break-even allowance</Term> <span className="num">{formatCents(applies ? divByOnePlusRate(o.cents, rate, s.taxRule.ratePrecision) : o.cents)}</span>
                         </>
                       )}
                       {o.note && ` · ${o.note}`}
                     </p>
+                    <ConfirmForm action={deleteOutsideOffer.bind(null, o.id)} message="Delete this outside offer?" className="mt-1">
+                      <button type="submit" className="text-xs text-ink-3 underline hover:text-flag">
+                        Delete
+                      </button>
+                    </ConfirmForm>
                   </div>
-                  <ConfirmForm action={deleteOutsideOffer.bind(null, o.id)} message="Delete this outside offer?">
-                    <button type="submit" className="btn btn-quiet btn-sm text-ink-2">
-                      Delete
-                    </button>
-                  </ConfirmForm>
-                </li>
+                </OutsideOfferItem>
               );
             })}
           </ul>
         )}
-      </section>
+      </Section>
     </div>
   );
 }
