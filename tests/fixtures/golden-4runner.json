@@ -1,0 +1,103 @@
+{
+  "$comment": "Real deal from the brief. Source images belong in fixtures/source (not present at build time). Amounts are integer cents. Never edit expected values to make a test pass.",
+  "today": "2026-10-09",
+  "vehicle": {
+    "vin": "JTEVA5BRXT5165696",
+    "year": 2026,
+    "make": "Toyota",
+    "model": "4Runner",
+    "trim": "TRD Off-Road Premium",
+    "powertrain": "i-FORCE 2.4L turbo gas",
+    "exteriorColor": "Everest (EA20)",
+    "interiorColor": "20",
+    "modelCode": "8672",
+    "epaCombinedMpg": 21
+  },
+  "sticker": {
+    "lines": [
+      { "id": "base", "label": "Base MSRP", "cents": 5647000, "group": "base", "source": "sticker" },
+      { "id": "moonroof", "label": "Power tilt/slide moonroof", "cents": 85000, "group": "factory_option", "source": "sticker" },
+      { "id": "emissions", "label": "50-state emissions", "cents": 0, "group": "factory_option", "source": "sticker" },
+      { "id": "set-tires", "label": "Nitto Ridge Grappler tires", "cents": 159900, "group": "distributor_option", "source": "sticker" },
+      { "id": "set-toyoguard", "label": "ToyoGuard Platinum", "cents": 69900, "group": "distributor_option", "source": "sticker" },
+      { "id": "set-emblem", "label": "LED emblem with tailgate insert", "cents": 53900, "group": "distributor_option", "source": "sticker" },
+      { "id": "set-crossbars", "label": "Cross bars", "cents": 52900, "group": "distributor_option", "source": "sticker" },
+      { "id": "set-cable", "label": "Phone cable package", "cents": 7900, "group": "distributor_option", "source": "sticker" },
+      { "id": "dph", "label": "Delivery, processing and handling", "cents": 159500, "group": "dph", "source": "sticker" }
+    ],
+    "totalSrpCents": 6236000,
+    "factoryMsrpCents": 5732000,
+    "distributorOptionsTotalCents": 344500
+  },
+  "offer": {
+    "sellingPriceCents": 5871400,
+    "statedDiscountCents": 364600,
+    "lines": [
+      { "id": "carbon", "label": "Carbon neutral program", "cents": 20000, "category": "dealer_addon", "taxable": true, "source": "worksheet", "onSticker": false },
+      { "id": "doc", "label": "Doc fee", "cents": 69900, "category": "dealer_fee", "taxable": true, "source": "worksheet" },
+      { "id": "tax", "label": "State taxes and fees", "cents": 417291, "category": "tax", "taxable": null, "source": "worksheet" },
+      { "id": "elt", "label": "ELT", "cents": 25700, "category": "dealer_fee", "taxable": false, "source": "worksheet" },
+      { "id": "lemon", "label": "Georgia lemon law fee", "cents": 300, "category": "gov_fee", "taxable": false, "source": "worksheet" }
+    ],
+    "tradeAllowanceCents": 2150000,
+    "cashDownCents": 0,
+    "statedTotalCents": 4254591,
+    "statedBalanceCents": 5654591,
+    "financing": [],
+    "paymentGrid": [
+      { "id": "g48-0", "termMonths": 48, "cashDownCents": 0, "paymentCents": 141242, "source": "worksheet" },
+      { "id": "g48-2500", "termMonths": 48, "cashDownCents": 250000, "paymentCents": 134998, "source": "worksheet" },
+      { "id": "g48-5000", "termMonths": 48, "cashDownCents": 500000, "paymentCents": 128753, "source": "worksheet" },
+      { "id": "g66-0", "termMonths": 66, "cashDownCents": 0, "paymentCents": 109346, "source": "worksheet" },
+      { "id": "g66-2500", "termMonths": 66, "cashDownCents": 250000, "paymentCents": 104511, "source": "worksheet" },
+      { "id": "g66-5000", "termMonths": 66, "cashDownCents": 500000, "paymentCents": 99677, "source": "worksheet" },
+      { "id": "g75-0", "termMonths": 75, "cashDownCents": 0, "paymentCents": 96373, "source": "worksheet" },
+      { "id": "g75-2500", "termMonths": 75, "cashDownCents": 250000, "paymentCents": 92113, "source": "worksheet" },
+      { "id": "g75-5000", "termMonths": 75, "cashDownCents": 500000, "paymentCents": 87852, "source": "worksheet" }
+    ],
+    "quoteExpiresOn": null
+  },
+  "trade": {
+    "payoffCents": 1400000,
+    "payoffGoodThrough": "2026-10-31",
+    "outsideOffers": [
+      { "id": "outside-1", "source": "Outside offer", "cents": 2350000, "expiresOn": "2026-10-20", "contingentOnInspection": false }
+    ],
+    "vinAndOwnerRecorded": true
+  },
+  "promoApr": 0.0499,
+  "expected": {
+    "vinCheckDigit": "X",
+    "stickerReconciles": true,
+    "factoryMsrpPlusDphCents": 5891500,
+    "discountCents": 364600,
+    "discountPct": 0.0585,
+    "vsFactoryMsrpDphCents": -20100,
+    "allInCents": 5987000,
+    "allInRatio": 0.9601,
+    "allInNoAddonsCents": 5967000,
+    "allInNoAddonsRatio": 0.9569,
+    "dealerStatedTaxCents": 417291,
+    "dealerTaxBaseCents": 5961300,
+    "correctTaxBaseCents": 3811300,
+    "correctTaxCents": 266791,
+    "overchargeCents": 150500,
+    "correctedBalanceCents": 5504091,
+    "taxNoAddonsCents": 265391,
+    "correctedBalanceNoAddonsCents": 5482691,
+    "equityCents": 750000,
+    "effectiveTradeValueCents": 2300500,
+    "outsideWinsByCents": 49500,
+    "breakEvenAllowanceCents": 2196262,
+    "ifDealerMatchesTradeWinsByCents": 164500,
+    "impliedApr": { "48": 0.092, "66": 0.0915, "75": 0.0812 },
+    "impliedAprToleranceAbs": 0.001,
+    "paymentAt499For48Cents": 126240,
+    "paymentToleranceCents": 50
+  },
+  "revision2": {
+    "$comment": "Second revision: trade allowance rises to 23,500 and selling price rises to 60,714. Must trigger trade_up_price_up.",
+    "sellingPriceCents": 6071400,
+    "tradeAllowanceCents": 2350000
+  }
+}
