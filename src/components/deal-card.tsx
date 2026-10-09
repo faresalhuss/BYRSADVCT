@@ -12,12 +12,15 @@ export function DealCard({ deal, report, rank, overall }: { deal: DealRow; repor
   const flags = report.flags.filter((f) => f.severity === "flag").length;
   const vehicle = [v.year, v.make, v.model, v.trim].filter(Boolean).join(" ");
   return (
-    <Link href={`/deals/${deal.id}`} className={`card card-hover block p-4 ${rank === 1 ? "card-accent" : ""}`}>
+    <article className={`card card-hover relative p-4 focus-within:ring-2 focus-within:ring-accent/40 ${rank === 1 ? "card-accent" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-2 truncate font-medium">
             {rank !== null && <span className="mono text-xs text-ink-3">#{rank}</span>}
-            {deal.dealership_name}
+            {/* The whole card is the link: the anchor's ::after covers the card, and the term buttons sit above it. */}
+            <Link href={`/deals/${deal.id}`} className="outline-none after:absolute after:inset-0 after:rounded-[inherit] after:content-['']">
+              {deal.dealership_name}
+            </Link>
           </p>
           <p className="truncate text-sm text-ink-2">{vehicle || "Vehicle not entered"}</p>
         </div>
@@ -28,7 +31,7 @@ export function DealCard({ deal, report, rank, overall }: { deal: DealRow; repor
       </div>
       <dl className="mt-4 grid grid-cols-3 gap-2">
         <div className="metric">
-          <dt className="eyebrow">
+          <dt className="eyebrow relative z-10 w-fit">
             <Term k="all_in">All-in % SRP</Term>
           </dt>
           <dd className="metric-value num text-xl">
@@ -36,7 +39,7 @@ export function DealCard({ deal, report, rank, overall }: { deal: DealRow; repor
           </dd>
         </div>
         <div className="metric">
-          <dt className="eyebrow">
+          <dt className="eyebrow relative z-10 w-fit">
             <Term k="otd">Out the door</Term>
           </dt>
           <dd className="metric-value num text-xl">
@@ -66,6 +69,6 @@ export function DealCard({ deal, report, rank, overall }: { deal: DealRow; repor
         )}
         {deal.quote_expires_on && <span>Expires {formatDate(deal.quote_expires_on)}</span>}
       </div>
-    </Link>
+    </article>
   );
 }

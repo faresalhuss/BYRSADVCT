@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { normalizePhone, telHref } from "@/lib/phone";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ConfirmForm } from "@/components/confirm-form";
@@ -67,8 +68,8 @@ async function Deal({ params }: { params: PageProps<"/deals/[id]">["params"] }) 
       <div className="no-print -mt-3 mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <MapLink name={d.deal.dealership_name} address={d.deal.dealership_address} />
         {d.deal.dealership_phone && (
-          <a href={`tel:${d.deal.dealership_phone.replace(/[^\d+]/g, "")}`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
-            <Icon.Phone size={14} /> {d.deal.dealership_phone}
+          <a href={telHref(d.deal.dealership_phone)} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
+            <Icon.Phone size={14} /> {normalizePhone(d.deal.dealership_phone)}
             {d.deal.salesperson && <span className="text-ink-3">· {d.deal.salesperson}</span>}
           </a>
         )}

@@ -77,11 +77,18 @@ export interface TradeRoute {
   taxValueCents: number | null;
   /** What the route nets you: allowance + tax credit, or the outside cash. */
   netCents: number | null;
+  /** Net minus the loan payoff: the cash (or shortfall, negative) left once the lender is paid. Null when no payoff is entered. */
+  afterPayoffCents: number | null;
   expiresOn: string | null;
   expired: boolean;
   contingent: boolean;
   dealId: string | null;
   rank: number | null;
+}
+
+function afterPayoff(netCents: number | null, payoffCents: number | null): number | null {
+  if (netCents === null || payoffCents === null) return null;
+  return netCents - payoffCents;
 }
 
 export function compareTradeRoutes(reports: DealReport[], trade: TradeProfile, rule: TaxRule, today: string): TradeRoute[] {
@@ -91,11 +98,11 @@ export function compareTradeRoutes(reports: DealReport[], trade: TradeProfile, r
     const a = r.trade.allowance.value;
     if (a === null) continue;
     const tv = r.trade.taxValue.value ?? (applies ? mulRate(a, rule.rate, rule.ratePrecision) : 0);
-    routes.push({ key: `deal:${r.id}`, kind: "dealer", label: `Trade to ${r.name}`, grossCents: a, taxValueCents: tv, netCents: a + tv, expiresOn: null, expired: false, contingent: false, dealId: r.id, rank: null });
+    routes.push({ key: `deal:${r.id}`, kind: "dealer", label: `Trade to ${r.name}`, grossCents: a, taxValueCents: tv, netCents: a + tv, afterPayoffCents: afterPayoff(a + tv, trade.payoffCents), expiresOn: null, expired: false, contingent: false, dealId: r.id, rank: null });
   }
   for (const o of trade.outsideOffers as OutsideOffer[]) {
     const expired = o.expiresOn !== null && daysBetween(today, o.expiresOn) < 0;
-    routes.push({ key: `outside:${o.id}`, kind: "outside", label: `Sell to ${o.source}`, grossCents: o.cents, taxValueCents: 0, netCents: o.cents, expiresOn: o.expiresOn, expired, contingent: o.contingentOnInspection, dealId: null, rank: null });
+    routes.push({ key: `outside:${o.id}`, kind: "outside", label: `Sell to ${o.source}`, grossCents: o.cents, taxValueCents: 0, netCents: o.cents, afterPayoffCents: afterPayoff(o.cents, trade.payoffCents), expiresOn: o.expiresOn, expired, contingent: o.contingentOnInspection, dealId: null, rank: null });
   }
   const live = routes.filter((r) => !r.expired && r.netCents !== null).sort((a, b) => b.netCents! - a.netCents!);
   live.forEach((r, i) => (r.rank = i + 1));

@@ -26,3 +26,12 @@ One line per lesson. Corrections and confirmed approaches alike. Why each matter
 - A Suspense fallback must not call `usePathname()` itself; the "static" nav variant has to be hook-free or the build fails prerendering.
 - Vercel bodies cap at 4.5 MB, so the multi-document import uploads to `imports/<batch>/` from the browser, reads them server-side in one Claude call, and moves them into `deals/<id>/` when the deal is created.
 - A closed `[popover]` element must never get a `display` utility class (`block`): it overrides the UA `display: none`, leaving an invisible fixed layer that intercepts taps across the page. Guarded with `[popover]:not(:popover-open) { display: none !important }`.
+
+## Lesson: never render a Term (or any interactive content) inside a Link
+The deal cards were a `<Link>` wrapping Term buttons whose popovers contain a "Full glossary" `<a>`. HTML forbids `<a>` inside `<a>`, so the browser's parser restructured the server HTML, React logged hydration error #418 and re-rendered the page on the client; in Safari this left a term popover that could not be closed. Fix: the card is an `<article>` with a stretched link (the anchor's `::after` covers the card) and the term buttons sit above it with `relative z-10`. The E2E flow now asserts `a a` is empty and no page errors fire on a full load of the deals list and a deal page, and opens and closes a term popover.
+
+## Lesson: `.table th { text-align: left }` beats `.text-right`
+A class on `th` loses to the `.table th` rule on specificity, so numeric headers sat left of right-aligned figures. `.table th.text-right, .table td.text-right { text-align: right }` restores the utility.
+
+## Phone numbers
+`src/lib/phone.ts` formats progressively as you type ("(678) 224-9057"), the Zod schemas normalize on save, and every display site renders `telHref()` so the number is tappable. International numbers (`+44 ...`) are left as typed.

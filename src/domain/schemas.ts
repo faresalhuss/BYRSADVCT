@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizePhone } from "@/lib/phone";
 import type {
   Benchmark,
   FinancingQuote,
@@ -287,7 +288,7 @@ export const dealStatusSchema = z.enum(["verbal", "written", "expired"]);
 export const dealFormSchema = z.object({
   dealershipName: z.string().min(1, "Dealership name is required").max(120),
   dealershipAddress: z.string().max(200).nullable(),
-  dealershipPhone: z.string().max(40).nullable(),
+  dealershipPhone: z.string().max(40).nullable().transform(normalizePhone),
   dealershipWebsite: z.string().max(200).nullable(),
   salesperson: z.string().max(120).nullable(),
   status: dealStatusSchema,
@@ -325,7 +326,7 @@ export const inquiryFormSchema = z.object({
   city: z.string().max(80).nullable(),
   state: z.string().length(2).nullable(),
   zip: z.string().max(10).nullable(),
-  phone: z.string().max(40).nullable(),
+  phone: z.string().max(40).nullable().transform(normalizePhone),
   website: z.string().max(300).nullable(),
   listingUrl: z.string().max(500).nullable(),
   salesperson: z.string().max(120).nullable(),

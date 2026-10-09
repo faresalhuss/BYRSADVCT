@@ -122,6 +122,10 @@ describe("trade routes and overall ranking", () => {
     expect(routes[0]!.netCents).toBe(2461000);
     expect(routes.find((r) => r.kind === "outside")!.rank).toBe(2);
     expect(routes.find((r) => r.label === "Trade to A")!.rank).toBe(3);
+    // After payoff: net minus the 14,000 loan balance in the fixture.
+    expect(routes[0]!.afterPayoffCents).toBe(2461000 - 1400000);
+    const noPayoff = compareTradeRoutes([a], { ...(fixture.trade as DealInput["trade"]), payoffCents: null }, GEORGIA_TAVT_2026, fixture.today);
+    expect(noPayoff[0]!.afterPayoffCents).toBeNull();
   });
   it("overall picks each deal's best route and ranks by net cost", () => {
     const a = evaluateDeal(base({ id: "a", name: "A", offer: fixture.offer as Offer }));

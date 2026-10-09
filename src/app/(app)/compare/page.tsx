@@ -72,7 +72,20 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
         {Tabs}
         <Section id="routes" title="Where the Tesla nets the most" intro="Every dealer allowance (plus its 7% tax credit) against every outside offer, independent of which 4Runner you buy.">
           <Explain>
-            A dealer allowance reduces Georgia TAVT by 7% of the allowance, so it is worth more than the same cash from an outside buyer. The <Term k="break_even">break-even</Term> allowance is the outside offer divided by 1.07.
+            A dealer allowance reduces Georgia TAVT by 7% of the allowance, so it is worth more than the same cash from an outside buyer. The <Term k="break_even">break-even</Term> allowance is the outside offer divided by 1.07.{" "}
+            {ctx.trade.profile.payoffCents !== null ? (
+              <>
+                After payoff is what is left once the {formatCents(ctx.trade.profile.payoffCents)} loan balance is paid{ctx.trade.profile.payoffGoodThrough ? ` (good through ${ctx.trade.profile.payoffGoodThrough})` : ""}: positive is cash to you, negative is what you would bring to the table.
+              </>
+            ) : (
+              <>
+                Enter the loan payoff on the{" "}
+                <Link href="/trade" className="underline">
+                  Trade page
+                </Link>{" "}
+                to see what each route leaves after the lender is paid.
+              </>
+            )}
           </Explain>
           {routes.length === 0 ? (
             <p className="mt-3 text-sm text-ink-2">
@@ -84,7 +97,7 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
             </p>
           ) : (
             <div className="-mx-4 mt-3 overflow-x-auto px-4">
-              <table className="table min-w-[520px]">
+              <table className="table min-w-[640px]">
                 <thead>
                   <tr>
                     <th>Rank</th>
@@ -92,6 +105,7 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
                     <th className="text-right">Gross</th>
                     <th className="text-right">Tax credit</th>
                     <th className="text-right">Nets you</th>
+                    <th className="text-right">After payoff</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -113,6 +127,7 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
                         {formatCents(r.netCents)}
                         {r.rank === 1 && <Icon.Check size={14} className="ml-1 inline" />}
                       </td>
+                      <td className={`num text-right ${r.afterPayoffCents !== null && r.afterPayoffCents < 0 ? "text-flag" : ""}`}>{r.afterPayoffCents === null ? "payoff not entered" : formatCents(r.afterPayoffCents)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -207,6 +222,13 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
               With trade
             </Link>
           </nav>
+          <div className="mt-3">
+            <Explain>
+              {mode === "price_only"
+                ? "Price only ranks each dealer on its all-in price (selling price, dealer fees and add-ons) as a share of total SRP, with the trade left out. That is the cleanest way to compare dealers, because a trade allowance can hide a weak price."
+                : "With trade ranks each dealer on what you would actually pay after trading the Tesla to that dealer: the all-in price plus tax, minus the allowance and its 7% tax credit. A dealer with a weaker price but a stronger trade offer can move up here."}
+            </Explain>
+          </div>
 
           <Section id="ranking" title={mode === "price_only" ? "Ranked on all-in dealer price, trade excluded" : "Ranked on net cost after trading to each dealer"} className="mt-4">
             <ol className="text-sm">

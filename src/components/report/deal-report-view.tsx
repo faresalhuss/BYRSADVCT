@@ -98,6 +98,9 @@ export function DealReportView({ report, sticker, vehicle, settings, dealId, sal
         {report.verdict.drivers.length > 0 && (
           <details className="mt-3 text-sm">
             <summary className="tap inline-flex cursor-pointer items-center text-ink-2">What drove the score</summary>
+            <p className="mt-1 text-ink-3">
+              The score runs 0 to 100. All-in at or below your strong line scores 85 to 100, at your beats-best line 70, at sticker 40, and 5% over sticker 10. Each open flag then takes 5 points (up to 25) and each caution 2 (up to 10).
+            </p>
             <ul className="mt-1">
               {report.verdict.drivers.map((d) => (
                 <li key={d.label} className="flex justify-between border-t border-line py-1">

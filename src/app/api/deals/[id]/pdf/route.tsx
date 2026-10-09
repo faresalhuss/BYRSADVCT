@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { normalizePhone } from "@/lib/phone";
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import { evaluate, getDeal, getEvalContext, parseOffer, parseSticker, parseVehicle } from "@/db/queries";
 import { formatCents, type DealReport, type Offer } from "@/engine";
@@ -60,7 +61,7 @@ function BuyersOrder({ r, offer, dealer, vehicleText, vin, stock, today, sticker
         <View>
           <Text style={s.h1}>{dealer.name.toUpperCase()}</Text>
           {dealer.address && <Text style={s.muted}>{dealer.address}</Text>}
-          {dealer.phone && <Text style={s.muted}>{dealer.phone}</Text>}
+          {dealer.phone && <Text style={s.muted}>{normalizePhone(dealer.phone)}</Text>}
         </View>
         <View style={{ alignItems: "flex-end" }}>
           <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 12 }}>PURCHASE WORKSHEET</Text>

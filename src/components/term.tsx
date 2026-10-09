@@ -40,7 +40,21 @@ export function Term({ k, children }: { k: string; children?: React.ReactNode })
           <Link href={`/glossary#${entry.key}`} className="text-xs text-accent underline">
             Full glossary
           </Link>
-          <button type="button" className="btn btn-sm" popoverTarget={popId} popoverTargetAction="hide">
+          <button
+            type="button"
+            className="btn btn-sm"
+            popoverTarget={popId}
+            popoverTargetAction="hide"
+            onClick={(e) => {
+              // Fallback for engines that ignore popovertargetaction: hide the enclosing popover directly.
+              const pop = e.currentTarget.closest("[popover]") as HTMLElement | null;
+              try {
+                pop?.hidePopover();
+              } catch {
+                /* already hidden */
+              }
+            }}
+          >
             Close
           </button>
         </span>

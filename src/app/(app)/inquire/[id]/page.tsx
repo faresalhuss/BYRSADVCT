@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { normalizePhone, telHref } from "@/lib/phone";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ConfirmForm } from "@/components/confirm-form";
@@ -125,8 +126,8 @@ async function Inquiry({ params, searchParams }: { params: PageProps<"/inquire/[
           <div className="mt-4 flex flex-col gap-2">
             <MapLink name={inq.dealership_name} address={inq.address_line} city={inq.city} state={inq.state} zip={inq.zip} />
             {inq.phone && (
-              <a href={`tel:${inq.phone.replace(/[^\d+]/g, "")}`} className="inline-flex items-center gap-1.5 text-sm text-ink-2 hover:text-accent">
-                <Icon.Phone size={14} /> {inq.phone}
+              <a href={telHref(inq.phone)} className="inline-flex items-center gap-1.5 text-sm text-ink-2 hover:text-accent">
+                <Icon.Phone size={14} /> {normalizePhone(inq.phone)}
                 {inq.salesperson && <span className="text-ink-3">· ask for {inq.salesperson}</span>}
               </a>
             )}

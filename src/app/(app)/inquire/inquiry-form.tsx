@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { MoneyInput } from "@/components/editor/money-input";
+import { VinField } from "@/components/editor/vin-field";
+import { formatPhoneInput } from "@/lib/phone";
 import { US_STATES } from "@/content/states";
 import { createInquiry, updateInquiry } from "@/db/inquiry-actions";
 import type { InquiryForm } from "@/domain/schemas";
-import { checkVin, formatPercent, ratio } from "@/engine";
+import { checkVin, formatPercent, ratio, type VehicleDecoded } from "@/engine";
 
 export function InquiryEditor({ mode, id, initial }: { mode: "new" | "edit"; id: string | null; initial: InquiryForm }) {
   const router = useRouter();
@@ -14,6 +16,7 @@ export function InquiryEditor({ mode, id, initial }: { mode: "new" | "edit"; id:
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<Record<string, string>>({});
   const [pending, start] = useTransition();
+  const [decoded, setDecoded] = useState<VehicleDecoded | null>(null);
   const vin = checkVin(form.vehicle.vin);
   const pct = ratio(form.advertisedPriceCents, form.msrpCents);
 
@@ -45,7 +48,7 @@ export function InquiryEditor({ mode, id, initial }: { mode: "new" | "edit"; id:
             <Field label="ZIP" value={form.zip ?? ""} onChange={(v) => setForm((f) => ({ ...f, zip: v || null }))} inputMode="numeric" />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Phone" type="tel" value={form.phone ?? ""} onChange={(v) => setForm((f) => ({ ...f, phone: v || null }))} />
+            <Field label="Phone" type="tel" value={form.phone ?? ""} onChange={(v) => setForm((f) => ({ ...f, phone: formatPhoneInput(v) || null }))} autoComplete="tel" hint="Formatted as you type; tap it on the listing to call." />
             <Field label="Salesperson" value={form.salesperson ?? ""} onChange={(v) => setForm((f) => ({ ...f, salesperson: v || null }))} />
           </div>
           <Field label="Dealer website" type="url" value={form.website ?? ""} onChange={(v) => setForm((f) => ({ ...f, website: v || null }))} />
@@ -56,10 +59,21 @@ export function InquiryEditor({ mode, id, initial }: { mode: "new" | "edit"; id:
       <section className="card p-4 sm:p-5">
         <h2>Vehicle and price</h2>
         <div className="mt-3 grid gap-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="VIN" value={form.vehicle.vin ?? ""} onChange={(v) => setForm((f) => ({ ...f, vehicle: { ...f.vehicle, vin: v.toUpperCase() || null } }))} mono maxLength={17} hint={vin ? (vin.valid ? `Check digit ${vin.checkDigit} is valid.` : vin.reason ?? undefined) : "17 characters"} invalid={!!vin && !vin.valid} />
-            <Field label="Stock number" value={form.vehicle.stockNumber ?? ""} onChange={(v) => setForm((f) => ({ ...f, vehicle: { ...f.vehicle, stockNumber: v || null } }))} mono />
-          </div>
+          <VinField
+            id="inquiry-vin"
+            value={form.vehicle.vin ?? ""}
+            check={vin}
+            decoded={decoded}
+            entered={form.vehicle}
+            onChange={(v) => {
+              const next = v.toUpperCase();
+              if (next.trim() !== (form.vehicle.vin ?? "").trim()) setDecoded(null);
+              setForm((f) => ({ ...f, vehicle: { ...f.vehicle, vin: next || null } }));
+            }}
+            onDecoded={setDecoded}
+            onUse={(field, value) => setForm((f) => ({ ...f, vehicle: { ...f.vehicle, [field]: value } }))}
+          />
+          <Field label="Stock number" value={form.vehicle.stockNumber ?? ""} onChange={(v) => setForm((f) => ({ ...f, vehicle: { ...f.vehicle, stockNumber: v || null } }))} mono />
           <div className="grid grid-cols-[5rem_1fr_1fr] gap-2">
             <Field label="Year" type="number" value={form.vehicle.year?.toString() ?? ""} onChange={(v) => setForm((f) => ({ ...f, vehicle: { ...f.vehicle, year: v ? Number(v) : null } }))} />
             <Field label="Make" value={form.vehicle.make ?? ""} onChange={(v) => setForm((f) => ({ ...f, vehicle: { ...f.vehicle, make: v || null } }))} />

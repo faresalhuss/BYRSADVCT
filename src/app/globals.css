@@ -531,6 +531,11 @@ input[type="checkbox"] {
   border-top: 1px solid var(--line);
   vertical-align: top;
 }
+/* Numeric columns: the header lines up over the figures. */
+.table th.text-right,
+.table td.text-right {
+  text-align: right;
+}
 .table tr.row-hover:hover td {
   background: var(--surface-2);
 }

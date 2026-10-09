@@ -19,8 +19,12 @@ test.describe("deal flow (signed in)", () => {
   test("create a deal from the worksheet, see the audited verdict, compare and archive", async ({ page }) => {
     const name = `${PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     created.push(name);
+    const listErrors: string[] = [];
+    page.on("pageerror", (e) => listErrors.push(e.message));
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Deals", exact: true, level: 1 })).toBeVisible();
+    expect(await page.locator("a a").count()).toBe(0);
+    expect(listErrors.filter((m) => /react|hydrat/i.test(m))).toEqual([]);
     await page.getByRole("link", { name: "New deal" }).first().click();
     await expect(page.getByRole("heading", { name: "New deal", exact: true, level: 1 })).toBeVisible();
 
@@ -54,6 +58,22 @@ test.describe("deal flow (signed in)", () => {
     await expect(page.getByText("Keep negotiating").first()).toBeVisible();
     await expect(page.getByText("Tax computed without the trade credit").first()).toBeVisible();
     await expect(page.getByText("+$1,505.00").first()).toBeVisible();
+
+    // The page is valid HTML (no anchor inside an anchor) and hydrated without errors on a full load.
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.reload();
+    await expect(page.getByRole("heading", { name: name, exact: true, level: 1 })).toBeVisible();
+    expect(await page.locator("a a").count()).toBe(0);
+    // Only React/hydration errors count; WebKit also reports aborted link prefetches as page errors.
+    expect(errors.filter((m) => /react|hydrat/i.test(m))).toEqual([]);
+
+    // A term popover opens from its dotted label and closes from its own Close button.
+    await page.getByRole("button", { name: "All-in, % of total SRP" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "All-in dealer price, explained" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Close" }).click();
+    await expect(dialog).toBeHidden();
 
     // Tap-to-derive: the all-in number opens its derivation.
     await page.getByRole("button", { name: /All-in dealer price: \$59,870\.00/ }).first().click();

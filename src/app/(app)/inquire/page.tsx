@@ -8,6 +8,7 @@ import { EmptyState, PageHeader } from "@/components/ui";
 import { listInquiries, parseVehicle } from "@/db/queries";
 import { formatPercent, ratio } from "@/engine";
 import { formatDate } from "@/lib/dates";
+import { normalizePhone, telHref } from "@/lib/phone";
 
 export const metadata: Metadata = { title: "Inquire" };
 
@@ -23,7 +24,7 @@ export default function InquirePage() {
     <main>
       <PageHeader
         title="Inquire"
-        description="Listings worth a call. Save the VIN, stock number, trim, colors and advertised price, then convert the ones that quote into deals."
+        description="Listings worth a call. Save the VIN, stock number, trim, colors and advertised price, then convert the ones that quote into deals. The percentage on each card is the advertised price divided by the sticker: under 100% means the listing already sits below MSRP, before fees and add-ons."
         actions={
           <Link href="/inquire/new" className="btn btn-primary">
             <Icon.Plus size={16} /> New listing
@@ -101,7 +102,7 @@ function Card({ r }: { r: Awaited<ReturnType<typeof listInquiries>>[number] }) {
           </dd>
         </div>
         <div>
-          <dt className="eyebrow">Of MSRP</dt>
+          <dt className="eyebrow">Advertised, % of MSRP</dt>
           <dd className="num text-base font-semibold">{formatPercent(pct)}</dd>
         </div>
         {v.exteriorColor && (
@@ -120,8 +121,8 @@ function Card({ r }: { r: Awaited<ReturnType<typeof listInquiries>>[number] }) {
       <div className="flex flex-col gap-1">
         <MapLink name={r.dealership_name} address={r.address_line} city={r.city} state={r.state} zip={r.zip} />
         {r.phone && (
-          <a href={`tel:${r.phone.replace(/[^\d+]/g, "")}`} className="inline-flex items-center gap-1.5 text-sm text-ink-2 hover:text-accent">
-            <Icon.Phone size={14} /> {r.phone}
+          <a href={telHref(r.phone)} className="inline-flex items-center gap-1.5 text-sm text-ink-2 hover:text-accent">
+            <Icon.Phone size={14} /> {normalizePhone(r.phone)}
           </a>
         )}
       </div>
