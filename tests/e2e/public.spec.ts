@@ -23,5 +23,5 @@ test("sign-in form rejects an address that is not on the allowlist", async ({ pa
   await page.goto("/login");
   await page.getByLabel("Email").fill("stranger@example.com");
   await page.getByRole("button", { name: "Send sign-in link" }).click();
-  await expect(page.getByRole("alert")).toContainText("not on the allowlist");
+  await expect(page.locator("#login-error")).toContainText("not on the allowlist");
 });

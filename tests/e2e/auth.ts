@@ -42,11 +42,13 @@ export async function signIn(context: BrowserContext, baseURL: string, creds: E2
   return data.session.access_token;
 }
 
-/** Removes every deal whose dealership name starts with the E2E prefix, using the E2E user's own session (RLS applies). */
-export async function cleanup(creds: E2ECreds, accessToken: string, prefix: string): Promise<void> {
-  const res = await fetch(`${creds.url}/rest/v1/deals?dealership_name=like.${encodeURIComponent(prefix + "%")}`, {
-    method: "DELETE",
-    headers: { apikey: creds.key, authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) throw new Error(`cleanup failed: ${res.status}`);
+/** Removes the deals this test created (by exact dealership name), using the E2E user's own session (RLS applies). */
+export async function cleanup(creds: E2ECreds, accessToken: string, names: string[]): Promise<void> {
+  for (const name of names) {
+    const res = await fetch(`${creds.url}/rest/v1/deals?dealership_name=eq.${encodeURIComponent(name)}`, {
+      method: "DELETE",
+      headers: { apikey: creds.key, authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) throw new Error(`cleanup failed: ${res.status}`);
+  }
 }
