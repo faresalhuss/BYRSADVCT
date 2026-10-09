@@ -56,8 +56,8 @@ async function Revisions({ params }: { params: PageProps<"/deals/[id]/revisions"
                     </thead>
                     <tbody>
                       {changed.map((l) => {
-                        const fmt = (v: number | string | null) => (v === null ? "—" : l.unit === "cents" ? formatCents(v as number) : l.unit === "rate" ? formatApr(v as number) : String(v));
-                        const delta = l.unit === "cents" && typeof l.before === "number" && typeof l.after === "number" ? l.after - l.before : null;
+                        const fmt = (v: number | string | null) => (v === null ? "not entered" : l.unit === "cents" ? formatCents(v as number) : l.unit === "rate" ? formatApr(v as number) : String(v));
+                        const delta = l.deltaCents;
                         return (
                           <tr key={l.key} className="border-t border-line/70">
                             <td className="py-1 pr-2">

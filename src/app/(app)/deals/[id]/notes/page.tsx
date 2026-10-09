@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConfirmForm } from "@/components/confirm-form";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { deleteNote } from "@/db/actions";
@@ -44,11 +45,11 @@ async function Notes({ params }: { params: PageProps<"/deals/[id]/notes">["param
                 <span className={`pill ${n.channel === "written" ? "pill-accent" : "pill-info"}`}>{n.channel}</span>
               </div>
               <p className="mt-2 whitespace-pre-wrap">{n.body}</p>
-              <form action={deleteNote.bind(null, n.id, id)} className="mt-2 text-right">
+              <ConfirmForm action={deleteNote.bind(null, n.id, id)} message="Delete this note?" className="mt-2 text-right">
                 <button type="submit" className="btn btn-quiet btn-sm text-ink-2">
                   Delete
                 </button>
-              </form>
+              </ConfirmForm>
             </li>
           ))}
         </ol>

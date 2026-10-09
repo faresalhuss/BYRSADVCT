@@ -1,4 +1,5 @@
-import type { Cents, Offer, RevisionDiff, RevisionDiffLine, Unit } from "./types";
+import { auditGrid } from "./financing";
+import type { Cents, Offer, RevisionDiff, RevisionDiffLine, Settings, Unit } from "./types";
 
 interface Flat {
   key: string;
@@ -33,7 +34,7 @@ function flatten(offer: Offer): Flat[] {
   return out;
 }
 
-export function diffOffers(before: Offer, after: Offer): RevisionDiff {
+export function diffOffers(before: Offer, after: Offer, settings?: Settings): RevisionDiff {
   const a = new Map(flatten(before).map((f) => [f.key, f]));
   const b = new Map(flatten(after).map((f) => [f.key, f]));
   const keys = new Set([...a.keys(), ...b.keys()]);
@@ -43,9 +44,10 @@ export function diffOffers(before: Offer, after: Offer): RevisionDiff {
     const y = b.get(key);
     const label = y?.label ?? x?.label ?? key;
     const unit = y?.unit ?? x?.unit ?? "text";
-    if (x && !y) lines.push({ key, label, before: x.value, after: null, unit, change: "removed" });
-    else if (!x && y) lines.push({ key, label, before: null, after: y.value, unit, change: "added" });
-    else if (x && y) lines.push({ key, label, before: x.value, after: y.value, unit, change: x.value === y.value ? "same" : "changed" });
+    const dc = (p: number | string | null | undefined, q: number | string | null | undefined): Cents | null => (unit === "cents" && typeof p === "number" && typeof q === "number" ? q - p : null);
+    if (x && !y) lines.push({ key, label, before: x.value, after: null, unit, change: "removed", deltaCents: null });
+    else if (!x && y) lines.push({ key, label, before: null, after: y.value, unit, change: "added", deltaCents: null });
+    else if (x && y) lines.push({ key, label, before: x.value, after: y.value, unit, change: x.value === y.value ? "same" : "changed", deltaCents: dc(x.value, y.value) });
   }
   lines.sort((p, q) => p.key.localeCompare(q.key));
 
@@ -55,23 +57,33 @@ export function diffOffers(before: Offer, after: Offer): RevisionDiff {
   const charges = (o: Offer): Cents | null => {
     let total = 0;
     for (const l of o.lines) {
-      if (l.category !== "dealer_fee" && l.category !== "dealer_addon") continue;
+      if (l.category !== "dealer_fee" && (l.category !== "dealer_addon" || l.onSticker)) continue;
       if (l.cents === null) return null;
       total += l.cents;
     }
     return total;
   };
 
-  const maxApr = (o: Offer): number | null => {
-    const aprs = o.financing.map((f) => f.apr).filter((v): v is number => v !== null);
-    return aprs.length === 0 ? null : Math.max(...aprs);
-  };
+  // Rate movement: compare the same quote (by id) across revisions, and the same payment-grid term's implied APR.
+  const aprDeltas: number[] = [];
+  for (const q of after.financing) {
+    const prev = before.financing.find((p) => p.id === q.id);
+    if (prev && prev.apr !== null && q.apr !== null) aprDeltas.push(q.apr - prev.apr);
+  }
+  if (settings) {
+    const beforeRows = auditGrid(before, settings);
+    const afterRows = auditGrid(after, settings);
+    for (const row of afterRows) {
+      const prev = beforeRows.find((r) => r.termMonths === row.termMonths);
+      if (prev && prev.impliedApr !== null && row.impliedApr !== null) aprDeltas.push(row.impliedApr - prev.impliedApr);
+    }
+  }
 
   return {
     lines,
     tradeAllowanceDelta: delta(before.tradeAllowanceCents, after.tradeAllowanceCents),
     sellingPriceDelta: delta(before.sellingPriceCents, after.sellingPriceCents),
     dealerChargesDelta: delta(charges(before), charges(after)),
-    aprDelta: delta(maxApr(before), maxApr(after)),
+    aprDelta: aprDeltas.length === 0 ? null : Math.max(...aprDeltas),
   };
 }

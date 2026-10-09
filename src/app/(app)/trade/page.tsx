@@ -1,8 +1,9 @@
+import { ConfirmForm } from "@/components/confirm-form";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { deleteOutsideOffer } from "@/db/actions";
 import { getSettingsBundle, getTradeBundle } from "@/db/queries";
-import { daysBetween, formatCents, divByOnePlusRate } from "@/engine";
+import { daysBetween, formatCents, divByOnePlusRate, tradeCreditApplies } from "@/engine";
 import { formatDate, todayIso } from "@/lib/dates";
 import { OutsideOfferForm, TradeProfileForm } from "./forms";
 
@@ -52,17 +53,17 @@ async function Trade() {
                       {!expired && (
                         <>
                           {" "}
-                          · break-even dealer allowance <span className="num">{formatCents(divByOnePlusRate(o.cents, rate, s.taxRule.ratePrecision))}</span>
+                          · break-even dealer allowance <span className="num">{formatCents(tradeCreditApplies(s.taxRule, t.profile) ? divByOnePlusRate(o.cents, rate, s.taxRule.ratePrecision) : o.cents)}</span>
                         </>
                       )}
                       {o.note && ` · ${o.note}`}
                     </p>
                   </div>
-                  <form action={deleteOutsideOffer.bind(null, o.id)}>
+                  <ConfirmForm action={deleteOutsideOffer.bind(null, o.id)} message="Delete this outside offer?">
                     <button type="submit" className="btn btn-quiet btn-sm text-ink-2">
                       Delete
                     </button>
-                  </form>
+                  </ConfirmForm>
                 </li>
               );
             })}

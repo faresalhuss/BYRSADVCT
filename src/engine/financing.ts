@@ -29,9 +29,9 @@ export function auditGrid(offer: Offer, settings: Settings): GridRowAudit[] {
         return {
           id: c.id,
           cashDownCents: c.cashDownCents,
-          principalCents: p ?? 0,
+          principalCents: p,
           paymentCents: c.paymentCents,
-          impliedApr: p === null ? null : impliedApr(p, c.paymentCents, termMonths),
+          impliedApr: p === null || p <= 0 ? null : impliedApr(p, c.paymentCents, termMonths),
         };
       });
     const aprs = audited.map((c) => c.impliedApr).filter((v): v is number => v !== null);
@@ -56,32 +56,33 @@ export function analyzeFinancing(f: FinancingInputs): DealReport["financing"] {
   );
 
   const quotes = offer.financing.map((q) => {
-    const p = q.amountFinancedCents ?? (principalCents === null || q.cashDownCents === null ? principalCents : principalCents - q.cashDownCents);
-    const principal = derived("fin.principal", "Amount financed", p, "cents", q.amountFinancedCents !== null ? "stated amount financed" : "stated balance - cash down", [
+    // Unknown cash down is unknown, not zero: the principal stays "not yet quoted" until it is entered.
+    const p = q.amountFinancedCents ?? (principalCents === null || q.cashDownCents === null ? null : principalCents - q.cashDownCents);
+    const principal = derived(`fin.principal:${q.id}`, "Amount financed", p, "cents", q.amountFinancedCents !== null ? "stated amount financed" : "stated balance - cash down", [
       input("Amount financed", q.amountFinancedCents, "cents", q.source),
       input("Stated balance", principalCents, "cents", "worksheet"),
       input("Cash down", q.cashDownCents, "cents", q.source),
     ]);
-    const canCompute = p !== null && q.apr !== null && q.termMonths !== null && q.termMonths > 0 && p > 0;
+    const canCompute = p !== null && q.apr !== null && q.apr >= 0 && q.termMonths !== null && q.termMonths > 0 && p > 0;
     const computed = canCompute ? amortizedPayment(p, q.apr!, q.termMonths!) : null;
     const computedPayment = derived(
-      "fin.computedPayment",
+      `fin.computedPayment:${q.id}`,
       "Computed payment at stated APR",
       computed,
       "cents",
       "standard amortization: P x i / (1 - (1 + i)^-n), i = APR / 12",
       [input("Principal", p, "cents", "computed"), input("APR", q.apr, "rate", q.source), input("Term", q.termMonths, "months", q.source)],
     );
-    const quotedPayment = derived("fin.quotedPayment", "Quoted payment", q.paymentCents, "cents", "payment on the worksheet", [
+    const quotedPayment = derived(`fin.quotedPayment:${q.id}`, "Quoted payment", q.paymentCents, "cents", "payment on the worksheet", [
       input("Quoted payment", q.paymentCents, "cents", q.source),
     ]);
     const gapInfo = canCompute && q.paymentCents !== null ? paymentGap(p, q.apr!, q.termMonths!, q.paymentCents) : null;
-    const gap = derived("fin.gap", "Payment gap", gapInfo?.gapCents ?? null, "cents", "quoted payment - computed payment", [
+    const gap = derived(`fin.gap:${q.id}`, "Payment gap", gapInfo?.gapCents ?? null, "cents", "quoted payment - computed payment", [
       input("Quoted payment", q.paymentCents, "cents", q.source),
       input("Computed payment", computed, "cents", "computed"),
     ]);
     const hiddenPrincipal = derived(
-      "fin.hiddenPrincipal",
+      `fin.hiddenPrincipal:${q.id}`,
       "Hidden principal implied by the gap",
       gapInfo?.hiddenPrincipalCents ?? null,
       "cents",
@@ -89,7 +90,7 @@ export function analyzeFinancing(f: FinancingInputs): DealReport["financing"] {
       [input("Quoted payment", q.paymentCents, "cents", q.source), input("APR", q.apr, "rate", q.source), input("Term", q.termMonths, "months", q.source), input("Principal", p, "cents", "computed")],
     );
     const interest = canCompute && q.paymentCents !== null ? totalInterest(p, q.paymentCents, q.termMonths!) : canCompute && computed !== null ? totalInterest(p, computed, q.termMonths!) : null;
-    const totalInterestD = derived("fin.totalInterest", "Total interest", interest, "cents", "payment x term - principal", [
+    const totalInterestD = derived(`fin.totalInterest:${q.id}`, "Total interest", interest, "cents", "payment x term - principal", [
       input("Payment", q.paymentCents ?? computed, "cents", q.paymentCents !== null ? q.source : "computed"),
       input("Term", q.termMonths, "months", q.source),
       input("Principal", p, "cents", "computed"),

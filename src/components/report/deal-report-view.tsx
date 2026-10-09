@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/dates";
 import { Money, Pct } from "@/components/money";
 import { SeverityPill, VerdictPill } from "@/components/pills";
 import { DerivedNumber } from "./derived-number";
+import { SummaryBar } from "@/components/summary-bar";
 import { TargetBuilder } from "./target-builder";
 import { Counteroffer } from "./counteroffer";
 
@@ -17,6 +18,8 @@ interface Props {
   salesperson: string | null;
   dealershipName: string;
 }
+
+const SOURCE_LABEL: Record<string, string> = { typed: "typed", sticker: "sticker", worksheet: "worksheet", assumption: "assumed", setting: "setting", computed: "computed" };
 
 function Row({ label, d, strong = false, indent = false }: { label?: string; d: Derived; strong?: boolean; indent?: boolean }) {
   return (
@@ -37,6 +40,8 @@ function LineRow({ line }: { line: OfferLine }) {
       <th scope="row" className="py-2 pl-4 pr-3 text-left font-normal text-ink-2">
         {line.label}
         {line.category === "dealer_addon" && <span className="ml-2 pill pill-caution">negotiable</span>}
+        <span className="ml-2 text-xs">({SOURCE_LABEL[line.source] ?? line.source})</span>
+        {line.note && <span className="block text-xs">{line.note}</span>}
       </th>
       <td className="num py-2 text-right">
         <Money cents={line.cents} label={line.label} />
@@ -50,6 +55,8 @@ export function DealReportView({ report, sticker, vehicle, settings, dealId, sal
   const t = report.tax;
   return (
     <div className="flex flex-col gap-4">
+      <SummaryBar allInRatio={report.price.allInRatio.value} otdCents={report.price.otd.value} openFlags={openFlags.length} />
+
       {/* Headline */}
       <section className="card p-4" aria-labelledby="verdict-h">
         <div className="flex flex-wrap items-center gap-2">
@@ -313,9 +320,9 @@ export function DealReportView({ report, sticker, vehicle, settings, dealId, sal
             ))}
             {report.financing.grid.length > 0 && (
               <div className="mt-3">
-                <p className="text-sm">
+                <div className="text-sm">
                   Payment grid audit on <DerivedNumber d={report.financing.gridPrincipal} /> principal
-                </p>
+                </div>
                 <div className="-mx-4 overflow-x-auto px-4">
                   <table className="mt-1 min-w-[420px] text-sm">
                     <thead className="text-xs uppercase text-ink-2">
@@ -366,7 +373,7 @@ export function DealReportView({ report, sticker, vehicle, settings, dealId, sal
           What to ask for
         </h2>
         <TargetBuilder totalSrpCents={sticker.totalSrpCents} sellingPriceCents={report.price.sellingPrice.value} dealerFeesCents={report.price.dealerFees.value} dealerAddonsCents={report.price.dealerAddons.value} defaultRatio={settings.thresholds.strongRatio} beatsBestRatio={settings.thresholds.beatsBestRatio} />
-        <Counteroffer dealershipName={dealershipName} salesperson={salesperson} vehicle={vehicle} totalSrpCents={sticker.totalSrpCents} targetRatio={settings.thresholds.strongRatio} dealerFeesCents={report.price.dealerFees.value} />
+        <Counteroffer dealershipName={dealershipName} salesperson={salesperson} vehicle={vehicle} totalSrpCents={sticker.totalSrpCents} targetRatio={report.target.targetRatio} targetAllInCents={report.target.targetAllInCents} />
       </section>
 
       {report.revisionDiff && (
@@ -381,7 +388,7 @@ export function DealReportView({ report, sticker, vehicle, settings, dealId, sal
                 <li key={l.key} className="flex justify-between border-t border-line/70 py-1">
                   <span>{l.label}</span>
                   <span className="num">
-                    {l.unit === "cents" ? `${formatCents(l.before as number | null)} to ${formatCents(l.after as number | null)}` : `${l.before ?? "—"} to ${l.after ?? "—"}`}
+                    {l.unit === "cents" ? `${formatCents(l.before as number | null)} to ${formatCents(l.after as number | null)}` : `${l.before ?? "not entered"} to ${l.after ?? "not entered"}`}
                   </span>
                 </li>
               ))}

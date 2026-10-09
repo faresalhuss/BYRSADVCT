@@ -97,7 +97,7 @@ export function computeFlags(ctx: FlagContext): Flag[] {
       code: "tax_wrong_base",
       severity: "flag",
       title: tax.likelyError.code === "no_trade_credit" ? "Tax computed without the trade credit" : "Tax computed on the wrong base",
-      detail: `The dealer's ${formatCents(tax.statedTax.value)} equals ${formatApr(taxRule.rate)} of ${formatCents(tax.likelyError.baseCents)} (${tax.likelyError.label.toLowerCase()}). Correct ${taxRule.name} is ${formatApr(taxRule.rate)} of ${formatCents(tax.taxableBase.value)} = ${formatCents(tax.computedTax.value)}.`,
+      detail: `The dealer's ${formatCents(tax.statedTax.value)} equals ${formatApr(taxRule.rate, 1)} of ${formatCents(tax.likelyError.baseCents)} (${tax.likelyError.label.toLowerCase()}). Correct ${taxRule.name} is ${formatApr(taxRule.rate, 1)} of ${formatCents(tax.taxableBase.value)} = ${formatCents(tax.computedTax.value)}.`,
       impactCents: tax.difference.value,
       relatedIds: ["tax.stated", "tax.computed"],
     });

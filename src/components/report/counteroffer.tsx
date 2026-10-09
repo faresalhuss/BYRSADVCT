@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatCents, formatPercent, roundHalfUp, type VehicleEntered } from "@/engine";
+import { formatCents, formatPercent, type VehicleEntered } from "@/engine";
 
 interface Props {
   dealershipName: string;
@@ -9,7 +9,8 @@ interface Props {
   vehicle: VehicleEntered;
   totalSrpCents: number | null;
   targetRatio: number;
-  dealerFeesCents: number | null;
+  /** From the engine's target builder; never recomputed here. */
+  targetAllInCents: number | null;
 }
 
 export function buildCounteroffer(p: Props): string {
@@ -17,7 +18,7 @@ export function buildCounteroffer(p: Props): string {
   const car = [p.vehicle.year, p.vehicle.make, p.vehicle.model, p.vehicle.trim].filter(Boolean).join(" ") || "the vehicle we discussed";
   const vin = p.vehicle.vin ? `, VIN ${p.vehicle.vin}` : "";
   const stock = p.vehicle.stockNumber ? ` (stock ${p.vehicle.stockNumber})` : "";
-  const targetAllIn = p.totalSrpCents === null ? null : roundHalfUp(p.totalSrpCents * p.targetRatio);
+  const targetAllIn = p.targetAllInCents;
   const targetLine =
     targetAllIn === null
       ? "My target is an all-in dealer price (selling price plus every dealer fee and add-on) at or below the number I shared."

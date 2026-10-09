@@ -28,7 +28,7 @@ describe("formatCents", () => {
   it("formats negatives with a leading minus, never parentheses", () => {
     expect(formatCents(-150500)).toBe("-$1,505.00");
     expect(formatCents(5987000)).toBe("$59,870.00");
-    expect(formatCents(null)).toBe("—");
+    expect(formatCents(null)).toBe("not yet quoted");
     expect(formatCents(49500, { signAlways: true })).toBe("+$495.00");
   });
 });

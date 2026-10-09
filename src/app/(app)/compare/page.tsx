@@ -61,14 +61,14 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
         </div>
       ) : (
         <>
-          <div className="mt-4 flex gap-2" role="tablist" aria-label="Comparison mode">
-            <Link href={query("price_only")} role="tab" aria-selected={mode === "price_only"} className={`btn btn-sm ${mode === "price_only" ? "btn-primary" : ""}`}>
+          <nav className="mt-4 flex gap-2" aria-label="Comparison mode">
+            <Link href={query("price_only")} aria-current={mode === "price_only" ? "page" : undefined} className={`btn btn-sm ${mode === "price_only" ? "btn-primary" : ""}`}>
               Price only
             </Link>
-            <Link href={query("with_trade")} role="tab" aria-selected={mode === "with_trade"} className={`btn btn-sm ${mode === "with_trade" ? "btn-primary" : ""}`}>
+            <Link href={query("with_trade")} aria-current={mode === "with_trade" ? "page" : undefined} className={`btn btn-sm ${mode === "with_trade" ? "btn-primary" : ""}`}>
               With trade
             </Link>
-          </div>
+          </nav>
 
           <section className="card mt-4 p-4">
             <h2 className="text-lg">{mode === "price_only" ? "Ranked on all-in dealer price, trade excluded" : "Ranked on net cost after trading to each dealer"}</h2>
@@ -82,7 +82,7 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
                   return (
                     <li key={r.dealId} className="flex flex-wrap items-baseline justify-between gap-2 border-t border-line/70 py-2">
                       <span>
-                        <span className="num mr-2 text-ink-2">{r.rank === null ? "—" : `#${r.rank}`}</span>
+                        <span className="num mr-2 text-ink-2">{r.rank === null ? "unranked" : `#${r.rank}`}</span>
                         <Link href={`/deals/${r.dealId}`} className="underline">
                           {name}
                         </Link>
@@ -108,7 +108,7 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-surface-2">
-                    <th scope="col" className="sticky left-0 z-10 bg-surface-2 px-3 py-2 text-left font-medium">
+                    <th scope="col" className="sticky left-0 z-10 border-r border-line bg-surface-2 px-3 py-2 text-left font-medium">
                       Line
                     </th>
                     {result!.names.map((n, i) => (
@@ -123,7 +123,7 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
                 <tbody>
                   {result!.rows.map((row) => (
                     <tr key={row.key} className="border-t border-line/70">
-                      <th scope="row" className="sticky left-0 z-10 bg-surface px-3 py-2 text-left font-normal">
+                      <th scope="row" className="sticky left-0 z-10 border-r border-line bg-surface px-3 py-2 text-left font-normal">
                         {row.label}
                       </th>
                       {row.values.map((v, i) => {
@@ -132,9 +132,12 @@ async function Compare({ searchParams }: { searchParams: PageProps<"/compare">["
                           <td key={i} className={`num px-3 py-2 text-right ${best ? "bg-good-bg font-medium text-good" : ""} ${v === null ? "text-ink-2" : ""}`}>
                             {cell(row, v)}
                             {best && (
-                              <span className="ml-1" aria-label="best in row">
-                                &#10003;
-                              </span>
+                              <>
+                                <span className="ml-1" aria-hidden="true">
+                                  &#10003;
+                                </span>
+                                <span className="sr-only">best in row</span>
+                              </>
                             )}
                           </td>
                         );

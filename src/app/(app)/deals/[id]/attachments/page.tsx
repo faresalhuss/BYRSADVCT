@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConfirmForm } from "@/components/confirm-form";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { deleteAttachment } from "@/db/actions";
@@ -56,11 +57,11 @@ async function Attachments({ params }: { params: PageProps<"/deals/[id]/attachme
                       Import
                     </Link>
                   )}
-                  <form action={deleteAttachment.bind(null, a.id, id)}>
+                  <ConfirmForm action={deleteAttachment.bind(null, a.id, id)} message="Delete this file? This cannot be undone.">
                     <button type="submit" className="btn btn-quiet btn-sm text-ink-2">
                       Delete
                     </button>
-                  </form>
+                  </ConfirmForm>
                 </div>
               </div>
             </li>

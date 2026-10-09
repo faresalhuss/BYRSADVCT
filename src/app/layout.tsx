@@ -6,21 +6,20 @@ import { ServiceWorkerRegister } from "@/components/sw-register";
 const plex = IBM_Plex_Sans({
   variable: "--font-plex",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500"],
   display: "swap",
 });
 
 const newsreader = Newsreader({
   variable: "--font-newsreader",
   subsets: ["latin"],
-  weight: ["400", "500"],
-  style: ["normal", "italic"],
+  weight: ["500"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: { default: "BYRSADVCT", template: "%s | BYRSADVCT" },
-  description: "Pull every dealer offer apart, check the math, pick the best deal.",
+  description: "Dealer offers, itemized and ranked by all-in price.",
   applicationName: "BYRSADVCT",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "BYRSADVCT" },

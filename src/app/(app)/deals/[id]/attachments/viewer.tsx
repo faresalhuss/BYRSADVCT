@@ -36,10 +36,12 @@ export function Viewer({ id, mime, name, onClose }: { id: string; mime: string; 
     window.addEventListener("keydown", onKey);
     dialogRef.current?.focus();
     const prev = document.body.style.overflow;
+    const opener = document.activeElement as HTMLElement | null;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      opener?.focus?.();
     };
   }, [onClose]);
 
@@ -80,15 +82,15 @@ export function Viewer({ id, mime, name, onClose }: { id: string; mime: string; 
         <div className="flex gap-1">
           {isImage && (
             <>
-              <button type="button" className="tap rounded-sm border border-white/30 px-3" onClick={() => setScale((s) => Math.max(1, s / 1.5))} aria-label="Zoom out">
+              <button type="button" className="tap rounded-sm border border-white/70 px-3" onClick={() => setScale((s) => Math.max(1, s / 1.5))} aria-label="Zoom out">
                 -
               </button>
-              <button type="button" className="tap rounded-sm border border-white/30 px-3" onClick={() => setScale((s) => Math.min(8, s * 1.5))} aria-label="Zoom in">
+              <button type="button" className="tap rounded-sm border border-white/70 px-3" onClick={() => setScale((s) => Math.min(8, s * 1.5))} aria-label="Zoom in">
                 +
               </button>
               <button
                 type="button"
-                className="tap rounded-sm border border-white/30 px-3 text-sm"
+                className="tap rounded-sm border border-white/70 px-3 text-sm"
                 onClick={() => {
                   setScale(1);
                   setTx(0);
@@ -99,10 +101,10 @@ export function Viewer({ id, mime, name, onClose }: { id: string; mime: string; 
               </button>
             </>
           )}
-          <a href={src} className="tap inline-flex items-center rounded-sm border border-white/30 px-3 text-sm" target="_blank" rel="noreferrer">
+          <a href={src} className="tap inline-flex items-center rounded-sm border border-white/70 px-3 text-sm" target="_blank" rel="noreferrer">
             Open
           </a>
-          <button type="button" className="tap rounded-sm border border-white/30 px-3 text-sm" onClick={onClose}>
+          <button type="button" className="tap rounded-sm border border-white/70 px-3 text-sm" onClick={onClose}>
             Close
           </button>
         </div>

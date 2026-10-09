@@ -1,4 +1,4 @@
-import { derived, divByOnePlusRate, input, mulRate } from "./money";
+import { derived, divByOnePlusRate, formatApr, input, mulRate } from "./money";
 import { daysBetween, tradeCreditApplies } from "./tax";
 import type { Cents, DealReport, Offer, OutsideOffer, TaxRule, TradeProfile } from "./types";
 
@@ -47,14 +47,18 @@ export function analyzeTrade(t: TradeInputs): DealReport["trade"] {
     "Negative equity means you owe more than the dealer allows.",
   );
 
-  const taxValueCents = allowanceCents === null ? null : applies ? mulRate(allowanceCents, rule.rate, rule.ratePrecision) : 0;
+  const rateText = formatApr(rule.rate, 2);
+  // The credit cannot exceed the tax that would be due without it (the base is floored at zero).
+  const capCents = t.taxNoTradeCents;
+  const rawTaxValue = allowanceCents === null ? null : applies ? mulRate(allowanceCents, rule.rate, rule.ratePrecision) : 0;
+  const taxValueCents = rawTaxValue === null ? null : capCents !== null && rawTaxValue > capCents ? capCents : rawTaxValue;
   const taxValue = derived(
     "trade.taxValue",
     "Tax value of the trade credit",
     taxValueCents,
     "cents",
-    applies ? `allowance x ${rule.rate * 100}%` : "credit does not apply",
-    [input("Trade allowance", allowanceCents, "cents", "worksheet"), rateInput],
+    applies ? `allowance x ${rateText}, capped at the tax due without the credit` : "credit does not apply",
+    [input("Trade allowance", allowanceCents, "cents", "worksheet"), rateInput, input("Tax without trade credit", capCents, "cents", "computed")],
     applies ? undefined : "The trade credit only applies when the trade's VIN and owner are recorded on a dealer sale.",
   );
   const effectiveCents = allowanceCents === null || taxValueCents === null ? null : allowanceCents + taxValueCents;
@@ -70,7 +74,7 @@ export function analyzeTrade(t: TradeInputs): DealReport["trade"] {
     "Break-even dealer allowance",
     breakEvenCents,
     "cents",
-    applies ? `outside offer / (1 + ${rule.rate * 100}%)` : "outside offer (no tax credit applies)",
+    applies ? `outside offer / (1 + ${rateText})` : "outside offer (no tax credit applies)",
     [input(best ? `Outside offer (${best.source})` : "Best outside offer", best?.cents ?? null, "cents", "typed"), rateInput],
     "A dealer allowance at or above this nets you at least as much as selling outside.",
   );
@@ -97,13 +101,14 @@ export function analyzeTrade(t: TradeInputs): DealReport["trade"] {
     "Positive means trading to the dealer nets more; negative means the outside offer wins.",
   );
 
-  const matchCents = best === null ? null : applies ? mulRate(best.cents, rule.rate, rule.ratePrecision) : 0;
+  const rawMatch = best === null ? null : applies ? mulRate(best.cents, rule.rate, rule.ratePrecision) : 0;
+  const matchCents = rawMatch === null ? null : capCents !== null && rawMatch > capCents ? capCents : rawMatch;
   const ifDealerMatches = derived(
     "trade.ifMatches",
     "Margin if the dealer matches the outside offer",
     matchCents,
     "cents",
-    applies ? `outside offer x ${rule.rate * 100}%` : "0 (no tax credit applies)",
+    applies ? `outside offer x ${rateText}, capped at the tax due without the credit` : "0 (no tax credit applies)",
     [input("Best outside offer", best?.cents ?? null, "cents", "typed"), rateInput],
   );
 

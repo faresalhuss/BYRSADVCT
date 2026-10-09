@@ -4,7 +4,7 @@ import { derived, input, sumKnown } from "./money";
 import { analyzePrice } from "./price";
 import { diffOffers } from "./revisions";
 import { analyzeSticker } from "./sticker";
-import { auditTax, manufacturerRebatesAfterPrice, ruleIsStale, taxableBase } from "./tax";
+import { auditTax, isInformational, manufacturerRebatesAfterPrice, ruleIsStale, taxableBase } from "./tax";
 import { buildTarget } from "./target";
 import { analyzeTrade } from "./trade";
 import type { Cents, DealInput, DealReport } from "./types";
@@ -19,6 +19,9 @@ export function missingFields(d: DealInput): string[] {
   for (const l of d.offer.lines) {
     if (l.cents === null && l.category !== "conditional_rebate") missing.push(l.label);
   }
+  // Unknown is not zero: a quote with no dealer-fee line or no government-fee line has not been itemized yet.
+  if (!d.offer.lines.some((l) => l.category === "dealer_fee")) missing.push("dealer fees (doc fee, ELT; enter 0 if none)");
+  if (!d.offer.lines.some((l) => l.category === "gov_fee")) missing.push("government fees (title, registration)");
   if (d.offer.tradeAllowanceCents !== null && d.trade.payoffCents === null) missing.push("trade payoff");
   return missing;
 }
@@ -36,7 +39,7 @@ export function evaluateDeal(d: DealInput): DealReport {
   });
 
   // Corrected worksheet totals: selling - trade + every non-tax line + computed tax - after-price rebates.
-  const nonTaxLines = d.offer.lines.filter((l) => l.category !== "tax" && l.category !== "manufacturer_rebate" && l.category !== "conditional_rebate" && l.category !== "dealer_discount");
+  const nonTaxLines = d.offer.lines.filter((l) => !isInformational(l));
   const nonTax = sumKnown(nonTaxLines.map((l) => l.cents));
   const rebates = manufacturerRebatesAfterPrice(d.offer);
   const correctedTotalCents: Cents | null =
@@ -57,19 +60,26 @@ export function evaluateDeal(d: DealInput): DealReport {
       ...(rebates !== 0 ? [input("Manufacturer rebates", rebates, "cents", "worksheet")] : []),
     ],
   );
-  const payoff = d.trade.payoffCents;
+  // With a trade, the payoff is part of the balance and must be known. With no trade there is no payoff to add.
+  const hasTrade = d.offer.tradeAllowanceCents !== null;
+  const payoff = hasTrade ? d.trade.payoffCents : 0;
+  const cashDownKnown = d.offer.cashDownCents !== null;
   const cashDown = d.offer.cashDownCents ?? 0;
-  const correctedBalanceCents = correctedTotalCents === null ? null : correctedTotalCents + (payoff ?? 0) - cashDown;
+  const correctedBalanceCents = correctedTotalCents === null || payoff === null ? null : correctedTotalCents + payoff - cashDown;
   const correctedBalance = derived(
     "tax.correctedBalance",
     "Corrected balance",
     correctedBalanceCents,
     "cents",
-    "corrected total + trade payoff - cash down",
-    [input("Corrected total", correctedTotalCents, "cents", "computed"), input("Payoff", payoff, "cents", "typed"), input("Cash down", d.offer.cashDownCents, "cents", "worksheet")],
-    payoff === null ? "Payoff not yet entered; treated as unknown, shown without it." : undefined,
+    hasTrade ? "corrected total + trade payoff - cash down" : "corrected total - cash down",
+    [
+      input("Corrected total", correctedTotalCents, "cents", "computed"),
+      ...(hasTrade ? [input("Payoff", d.trade.payoffCents, "cents", "typed")] : []),
+      input("Cash down", cashDown, "cents", cashDownKnown ? "worksheet" : "assumption"),
+    ],
+    !cashDownKnown ? "No cash down was entered; assumed 0." : undefined,
   );
-  const addons = sumKnown(d.offer.lines.filter((l) => l.category === "dealer_addon" && !l.onSticker).map((l) => l.cents));
+  const addons = sumKnown(d.offer.lines.filter((l) => l.category === "dealer_addon" && !isInformational(l)).map((l) => l.cents));
   const correctedBalanceNoAddonsCents =
     correctedBalanceCents === null || addons.unknown > 0 || tax.computedTaxNoAddons.value === null || tax.computedTax.value === null
       ? null
@@ -99,7 +109,7 @@ export function evaluateDeal(d: DealInput): DealReport {
   });
 
   const financing = analyzeFinancing({ offer: d.offer, settings: d.settings });
-  const revisionDiff = d.previousOffer ? diffOffers(d.previousOffer, d.offer) : null;
+  const revisionDiff = d.previousOffer ? diffOffers(d.previousOffer, d.offer, d.settings) : null;
 
   const flags = computeFlags({ input: d, sticker, price, tax: { ...tax, rule: ruleSummary(d), correctedTotal, correctedBalance, correctedBalanceNoAddons }, trade, financing, revisionDiff });
   const missing = missingFields(d);

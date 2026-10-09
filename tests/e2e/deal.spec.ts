@@ -44,7 +44,7 @@ test.describe("deal flow (signed in)", () => {
     await page.getByLabel("State taxes and fees amount").blur();
 
     // Live recalculation in the sticky summary: all-in 59,870 / 62,360 = 96.01%.
-    await expect(page.getByLabel("All-in as percent of total SRP").first()).toHaveText("96.01%");
+    await expect(page.locator("dd", { hasText: "96.01%" }).first()).toBeVisible();
     await expect(page.getByText("Tax computed without the trade credit").first()).toBeVisible();
 
     await page.getByRole("button", { name: "Create deal" }).first().click();
@@ -68,8 +68,9 @@ test.describe("deal flow (signed in)", () => {
     await expect(page.getByRole("heading", { name: "Compare", exact: true, level: 1 })).toBeVisible();
     await expect(page.getByText(name).first()).toBeVisible();
 
-    // Archive from the deal page.
+    // Archive from the deal page (the form asks for confirmation first).
     await page.goto(dealUrl);
+    page.once("dialog", (d) => void d.accept());
     await page.getByRole("button", { name: "Archive", exact: true }).click();
     await expect(page.getByText("archived", { exact: true })).toBeVisible();
   });

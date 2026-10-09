@@ -8,6 +8,7 @@
   --ink: #1a1c1e;
   --ink-2: #5a5e63;
   --line: #d8d2c7;
+  --line-strong: #8a847a;
   --accent: #1f6f6a;
   --accent-ink: #ffffff;
   --accent-bg: rgba(31, 111, 106, 0.1);
@@ -31,6 +32,7 @@
     --ink: #eceae4;
     --ink-2: #a6a9ad;
     --line: #33383d;
+    --line-strong: #6b737b;
     --accent: #4fb3ab;
     --accent-ink: #0c1211;
     --accent-bg: rgba(79, 179, 171, 0.16);
@@ -52,6 +54,7 @@
   --ink: #eceae4;
   --ink-2: #a6a9ad;
   --line: #33383d;
+  --line-strong: #6b737b;
   --accent: #4fb3ab;
   --accent-ink: #0c1211;
   --accent-bg: rgba(79, 179, 171, 0.16);
@@ -71,6 +74,7 @@
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-bg: var(--accent-bg);
@@ -146,7 +150,7 @@ textarea {
 
 .field {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   color: var(--ink);
   min-height: 44px;
@@ -166,7 +170,7 @@ textarea {
 
 .btn {
   align-items: center;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--ink);
@@ -202,6 +206,18 @@ textarea {
   padding: 0 12px;
   font-size: 0.875rem;
 }
+@media (pointer: coarse) {
+  .btn-sm {
+    min-height: 44px;
+  }
+}
+
+details > summary .marker::after {
+  content: "+";
+}
+details[open] > summary .marker::after {
+  content: "\2212";
+}
 
 .card {
   background: var(--surface);
@@ -215,7 +231,7 @@ textarea {
   align-items: center;
   gap: 6px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   padding: 2px 8px;
   text-transform: uppercase;

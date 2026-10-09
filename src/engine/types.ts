@@ -264,7 +264,7 @@ export interface GridRowAudit {
   cells: {
     id: string;
     cashDownCents: Cents;
-    principalCents: Cents;
+    principalCents: Cents | null;
     paymentCents: Cents;
     impliedApr: number | null;
   }[];
@@ -388,6 +388,8 @@ export interface RevisionDiffLine {
   after: number | string | null;
   unit: Unit;
   change: "added" | "removed" | "changed" | "same";
+  /** after - before for money lines when both are known. */
+  deltaCents: Cents | null;
 }
 
 export interface RevisionDiff {

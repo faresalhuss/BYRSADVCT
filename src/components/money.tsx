@@ -8,29 +8,32 @@ interface MoneyProps {
   className?: string;
 }
 
-/** A money figure with tabular digits and a screen-reader name. */
+/** A money figure with tabular digits and a screen-reader name (visually hidden prefix, not aria-label on a span). */
 export function Money({ cents, label, showCents = true, signAlways = false, className = "" }: MoneyProps) {
-  const text = cents === null || cents === undefined ? "not yet quoted" : formatCents(cents, { cents: showCents, signAlways });
+  const text = formatCents(cents ?? null, { cents: showCents, signAlways });
   return (
-    <span className={`num ${className}`} aria-label={label ? `${label}: ${text}` : undefined}>
+    <span className={`num ${className}`}>
+      {label && <span className="sr-only">{label}: </span>}
       {text}
     </span>
   );
 }
 
 export function Pct({ value, label, digits = 2, className = "" }: { value: number | null | undefined; label?: string; digits?: number; className?: string }) {
-  const text = value === null || value === undefined ? "—" : formatPercent(value, digits);
+  const text = formatPercent(value ?? null, digits);
   return (
-    <span className={`num ${className}`} aria-label={label ? `${label}: ${text}` : undefined}>
+    <span className={`num ${className}`}>
+      {label && <span className="sr-only">{label}: </span>}
       {text}
     </span>
   );
 }
 
 export function Apr({ value, label, digits = 2, className = "" }: { value: number | null | undefined; label?: string; digits?: number; className?: string }) {
-  const text = value === null || value === undefined ? "—" : formatApr(value, digits);
+  const text = formatApr(value ?? null, digits);
   return (
-    <span className={`num ${className}`} aria-label={label ? `${label}: ${text}` : undefined}>
+    <span className={`num ${className}`}>
+      {label && <span className="sr-only">{label}: </span>}
       {text}
     </span>
   );

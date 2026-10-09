@@ -23,7 +23,10 @@ export function baseScore(ratio: number, strong: number, beatsBest: number): num
 }
 
 export function computeVerdict(allInRatio: number | null, flags: Flag[], settings: Settings, missing: string[]): Verdict {
-  const { strongRatio, beatsBestRatio, label } = settings.thresholds;
+  const { label } = settings.thresholds;
+  // Thresholds are user-editable; keep them ordered so the score stays monotone.
+  const strongRatio = Math.min(settings.thresholds.strongRatio, settings.thresholds.beatsBestRatio);
+  const beatsBestRatio = Math.max(settings.thresholds.strongRatio, settings.thresholds.beatsBestRatio);
   const thresholds = { strongRatio, beatsBestRatio, label };
   if (allInRatio === null) {
     return {

@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "BYRSADVCT",
     short_name: "BYRSADVCT",
-    description: "Pull every dealer offer apart, check the math, pick the best deal.",
+    description: "Dealer offers, itemized and ranked by all-in price.",
     start_url: "/",
     display: "standalone",
     background_color: "#f5f2ec",

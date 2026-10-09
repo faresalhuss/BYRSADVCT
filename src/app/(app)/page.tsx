@@ -9,7 +9,7 @@ export default function DealsPage(props: PageProps<"/">) {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl">Deals</h1>
-          <p className="mt-1 text-sm text-ink-2">Every offer, pulled apart and ranked.</p>
+          <p className="mt-1 text-sm text-ink-2">Ranked by all-in dealer price, trade excluded.</p>
         </div>
         <Link href="/deals/new" className="btn btn-primary">
           New deal

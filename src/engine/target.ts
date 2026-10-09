@@ -1,4 +1,4 @@
-import { roundHalfUp } from "./money";
+import { mulRate } from "./money";
 import type { Cents, Target } from "./types";
 
 export interface TargetInputs {
@@ -14,7 +14,7 @@ export interface TargetInputs {
  * (keeping the dealer's fees as quoted) and the gap from the current offer.
  */
 export function buildTarget(t: TargetInputs): Target {
-  const targetAllIn = t.totalSrpCents === null ? null : roundHalfUp(t.totalSrpCents * t.targetRatio);
+  const targetAllIn = t.totalSrpCents === null ? null : mulRate(t.totalSrpCents, t.targetRatio, 6);
   const withAddons =
     targetAllIn === null || t.dealerFeesCents === null || t.dealerAddonsCents === null ? null : targetAllIn - t.dealerFeesCents - t.dealerAddonsCents;
   const noAddons = targetAllIn === null || t.dealerFeesCents === null ? null : targetAllIn - t.dealerFeesCents;

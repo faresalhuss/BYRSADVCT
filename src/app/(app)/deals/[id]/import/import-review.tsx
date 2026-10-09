@@ -6,7 +6,7 @@ import { MoneyInput } from "@/components/editor/money-input";
 import { Viewer } from "@/app/(app)/deals/[id]/attachments/viewer";
 import { applyImport } from "@/db/import-actions";
 import type { Extraction } from "@/lib/anthropic";
-import { formatCents, roundHalfUp, type LineCategory, type Offer, type Sticker, type StickerLine, type VehicleEntered } from "@/engine";
+import { formatCents, reconcileOfferLines, reconcileStickerLines, roundHalfUp, type LineCategory, type Offer, type Sticker, type StickerLine, type VehicleEntered } from "@/engine";
 
 interface Props {
   dealId: string;
@@ -67,7 +67,11 @@ export function ImportReview({ dealId, attachment, current }: Props) {
         statedTotalCents: toCents(x.offer.statedTotalDollars),
         statedBalanceCents: toCents(x.offer.statedBalanceDollars),
         lines: x.offer.lines.map((l, i) => ({ id: `imp-o-${i}`, label: l.label, cents: toCents(l.amountDollars), category: l.category })),
-        grid: x.offer.paymentGrid.map((c) => ({ termMonths: c.termMonths, cashDownCents: toCents(c.cashDownDollars) ?? 0, paymentCents: toCents(c.paymentDollars) ?? 0 })),
+        grid: x.offer.paymentGrid.flatMap((c) => {
+          const payment = toCents(c.paymentDollars);
+          const down = toCents(c.cashDownDollars);
+          return payment === null || down === null ? [] : [{ termMonths: c.termMonths, cashDownCents: down, paymentCents: payment }];
+        }),
       });
       setVehicle({
         vin: x.vehicle.vin,
@@ -88,21 +92,14 @@ export function ImportReview({ dealId, attachment, current }: Props) {
     }
   }
 
-  const stickerSum = useMemo(() => (sticker ? sticker.lines.reduce((s, l) => (s === null || l.cents === null ? null : s + l.cents), 0 as number | null) : null), [sticker]);
-  const stickerReconciles = sticker !== null && sticker.lines.length > 0 && stickerSum !== null && sticker.totalSrpCents !== null && stickerSum === sticker.totalSrpCents;
-
-  const offerSum = useMemo(() => {
-    if (!offer || offer.sellingPriceCents === null) return null;
-    let s = offer.sellingPriceCents - (offer.tradeAllowanceCents ?? 0);
-    for (const l of offer.lines) {
-      if (l.category === "dealer_discount") continue;
-      if (l.cents === null) return null;
-      s += l.category === "manufacturer_rebate" || l.category === "conditional_rebate" ? -l.cents : l.cents;
-    }
-    return s;
-  }, [offer]);
-  const offerHasData = offer !== null && (offer.sellingPriceCents !== null || offer.lines.length > 0);
-  const offerReconciles = offerHasData && (offer.statedTotalCents === null ? offerSum !== null : offerSum === offer.statedTotalCents);
+  // Reconciliation is decided by the engine, never here.
+  const stickerCheck = useMemo(() => (sticker ? reconcileStickerLines(sticker.lines, sticker.totalSrpCents) : null), [sticker]);
+  const stickerSum = stickerCheck?.sumCents ?? null;
+  const stickerReconciles = stickerCheck?.reconciles ?? false;
+  const offerCheck = useMemo(() => (offer ? reconcileOfferLines(offer) : null), [offer]);
+  const offerSum = offerCheck?.sumCents ?? null;
+  const offerHasData = offerCheck?.hasData ?? false;
+  const offerReconciles = offerCheck?.reconciles ?? false;
 
   const canApply = (applySticker && stickerReconciles) || (applyOffer && offerReconciles);
   const blocked = (applySticker && sticker !== null && !stickerReconciles) || (applyOffer && offerHasData && !offerReconciles);
@@ -169,7 +166,7 @@ export function ImportReview({ dealId, attachment, current }: Props) {
             )}
 
             <section className="card p-4">
-              <label className="flex items-center gap-2 text-lg">
+              <label className="tap flex items-center gap-2 text-lg">
                 <input type="checkbox" checked={applySticker} onChange={(e) => setApplySticker(e.target.checked)} />
                 Window sticker ({sticker.lines.length} lines)
               </label>
@@ -216,7 +213,7 @@ export function ImportReview({ dealId, attachment, current }: Props) {
             </section>
 
             <section className="card p-4">
-              <label className="flex items-center gap-2 text-lg">
+              <label className="tap flex items-center gap-2 text-lg">
                 <input type="checkbox" checked={applyOffer} onChange={(e) => setApplyOffer(e.target.checked)} />
                 Dealer offer ({offer.lines.length} lines{offer.grid.length ? `, ${offer.grid.length} grid cells` : ""})
               </label>

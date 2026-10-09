@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { DealReportView } from "@/components/report/deal-report-view";
 import { StatusPill } from "@/components/pills";
+import { ConfirmForm } from "@/components/confirm-form";
 import { duplicateDeal, setArchived } from "@/db/actions";
 import { evaluate, getDeal, getEvalContext, parseSticker, parseVehicle } from "@/db/queries";
 import { formatDate } from "@/lib/dates";
@@ -72,11 +73,11 @@ async function Deal({ params }: { params: PageProps<"/deals/[id]">["params"] }) 
               Duplicate
             </button>
           </form>
-          <form action={setArchived.bind(null, id, !archived)}>
+          <ConfirmForm action={setArchived.bind(null, id, !archived)} message={archived ? "Unarchive this deal?" : "Archive this deal? It moves to the Archived list."}>
             <button type="submit" className="tap inline-flex items-center underline">
               {archived ? "Unarchive" : "Archive"}
             </button>
-          </form>
+          </ConfirmForm>
         </nav>
       </header>
       <DealReportView report={report} sticker={sticker} vehicle={vehicle} settings={ctx.settingsBundle.settings} dealId={id} salesperson={d.deal.salesperson} dealershipName={d.deal.dealership_name} />

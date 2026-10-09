@@ -1,8 +1,9 @@
+import { ConfirmForm } from "@/components/confirm-form";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { deleteBenchmark } from "@/db/actions";
 import { getBenchmarks, getSettingsBundle, listDeals, getEvalContext, evaluate } from "@/db/queries";
-import { daysBetween, formatCents, formatPercent } from "@/engine";
+import { benchmarkRatios, daysBetween, formatCents, formatPercent, percentileOf } from "@/engine";
 import { formatDate, todayIso } from "@/lib/dates";
 import { BenchmarkForm } from "./form";
 
@@ -23,9 +24,9 @@ export default function BenchmarksPage() {
 async function Benchmarks() {
   const [benchmarks, s, deals, ctx] = await Promise.all([getBenchmarks(), getSettingsBundle(), listDeals(), getEvalContext()]);
   const today = todayIso();
-  const ratios = benchmarks.map((b) => (b.totalSrpCents ? b.priceCents / b.totalSrpCents : null)).filter((r): r is number => r !== null).sort((a, b) => a - b);
+  const ratios = benchmarkRatios(benchmarks);
   const reports = deals.map((d) => ({ name: d.deal.dealership_name, ratio: evaluate(d, ctx).price.allInRatio.value }));
-  const percentile = (r: number) => (ratios.length === 0 ? null : Math.round((ratios.filter((x) => x <= r).length / ratios.length) * 100));
+  const percentile = (r: number) => percentileOf(r, ratios);
   return (
     <div className="mt-4 grid gap-4 lg:grid-cols-2">
       <section className="card p-4">
@@ -90,13 +91,13 @@ async function Benchmarks() {
                       <td className="py-1 pr-2">{b.kind}</td>
                       <td className="num py-1 text-right">{formatCents(b.totalSrpCents)}</td>
                       <td className="num py-1 text-right">{formatCents(b.priceCents)}</td>
-                      <td className="num py-1 text-right">{b.totalSrpCents ? formatPercent(b.priceCents / b.totalSrpCents) : "—"}</td>
+                      <td className="num py-1 text-right">{formatPercent(benchmarkRatios([b])[0] ?? null)}</td>
                       <td className="py-1 text-right">
-                        <form action={deleteBenchmark.bind(null, b.id)}>
+                        <ConfirmForm action={deleteBenchmark.bind(null, b.id)} message="Delete this benchmark?">
                           <button type="submit" className="btn btn-quiet btn-sm text-ink-2">
                             Delete
                           </button>
-                        </form>
+                        </ConfirmForm>
                       </td>
                     </tr>
                   );

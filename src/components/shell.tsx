@@ -5,7 +5,7 @@ import { NavTabs, NavTabsStatic } from "./nav-tabs";
 export function AppShell({ children, signOutAction }: { children: ReactNode; signOutAction: () => Promise<void> }) {
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="no-print sticky top-0 z-30 border-b border-line bg-bg/95 backdrop-blur-sm">
+      <header className="no-print sticky top-0 z-30 border-b border-line bg-bg">
         <div className="mx-auto flex h-12 max-w-5xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="serif text-lg tracking-tight">
             BYRSADVCT

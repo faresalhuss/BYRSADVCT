@@ -38,7 +38,7 @@ export function parseMoney(raw: string | number | null | undefined): Cents | nul
   if (raw === null || raw === undefined) return null;
   if (typeof raw === "number") {
     if (!Number.isFinite(raw)) return null;
-    return roundHalfUp(raw * 100);
+    return parseMoney(raw.toFixed(6));
   }
   let s = raw.trim().toLowerCase();
   if (s === "") return null;
@@ -90,8 +90,10 @@ const dollars = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maxim
 const wholeDollars = new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 /** Format cents as "-$1,505.00". Negative values always carry a leading minus, never parentheses. */
+export const NOT_QUOTED = "not yet quoted";
+
 export function formatCents(cents: Cents | null, opts: FormatOptions = {}): string {
-  if (cents === null || !Number.isFinite(cents)) return "—";
+  if (cents === null || !Number.isFinite(cents)) return NOT_QUOTED;
   const showCents = opts.cents ?? true;
   const symbol = opts.symbol ?? true;
   const abs = Math.abs(cents);
@@ -101,17 +103,17 @@ export function formatCents(cents: Cents | null, opts: FormatOptions = {}): stri
 }
 
 export function formatPercent(value: number | null, digits = 2): string {
-  if (value === null || !Number.isFinite(value)) return "—";
+  if (value === null || !Number.isFinite(value)) return NOT_QUOTED;
   return `${(value * 100).toFixed(digits)}%`;
 }
 
 export function formatApr(value: number | null, digits = 2): string {
-  if (value === null || !Number.isFinite(value)) return "—";
+  if (value === null || !Number.isFinite(value)) return NOT_QUOTED;
   return `${(value * 100).toFixed(digits)}%`;
 }
 
 export function formatValue(value: number | string | null, unit: Unit): string {
-  if (value === null) return "not yet quoted";
+  if (value === null) return NOT_QUOTED;
   switch (unit) {
     case "cents":
       return formatCents(value as number);

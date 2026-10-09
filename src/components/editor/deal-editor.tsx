@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { createDeal, updateDeal } from "@/db/actions";
 import type { DealForm } from "@/domain/schemas";
 import {
@@ -12,6 +12,7 @@ import {
   formatCents,
   type DealReport,
   type LineCategory,
+  type Source,
   type Offer,
   type OfferLine,
   type Settings,
@@ -21,9 +22,11 @@ import {
   type VehicleDecoded,
 } from "@/engine";
 import { SeverityPill } from "@/components/pills";
-import { Money, Pct } from "@/components/money";
+import { Money } from "@/components/money";
 import { clearDraft, loadDraft, saveDraft, type Draft } from "./draft-store";
+import { LineList, LineRow } from "./line-row";
 import { MoneyInput } from "./money-input";
+import { SummaryBar } from "@/components/summary-bar";
 
 export interface EditorContext {
   taxRule: TaxRule;
@@ -159,37 +162,17 @@ export function DealEditor({ mode, dealId, initial, previousOffer, context }: Pr
 
   return (
     <div className="pb-8">
-      {/* Sticky summary: the three numbers that matter, and Save. */}
-      <div className="sticky top-12 z-20 -mx-4 border-b border-line bg-surface-2/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
-        <div className="flex items-center justify-between gap-3">
-          <dl className="flex gap-4 text-sm">
-            <div>
-              <dt className="text-[11px] uppercase tracking-wide text-ink-2">All-in % SRP</dt>
-              <dd className="text-lg leading-tight">
-                <Pct value={report.price.allInRatio.value} label="All-in as percent of total SRP" />
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[11px] uppercase tracking-wide text-ink-2">OTD</dt>
-              <dd className="text-lg leading-tight">
-                <Money cents={report.price.otd.value} label="Out the door" showCents={false} />
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[11px] uppercase tracking-wide text-ink-2">Flags</dt>
-              <dd className={`num text-lg leading-tight ${openFlags > 0 ? "text-flag" : ""}`}>{openFlags}</dd>
-            </div>
-          </dl>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-xs text-ink-2 sm:inline" aria-live="polite">
-              {!online ? "Offline, draft kept on this device" : sync === "dirty" ? "Unsaved changes" : sync === "saving" ? "Saving" : sync === "saved" ? "Saved" : sync === "error" ? "Not saved" : ""}
-            </span>
-            <button type="button" className="btn btn-primary" onClick={save} disabled={pending || !online}>
-              {pending ? "Saving" : mode === "new" ? "Create deal" : "Save"}
-            </button>
-          </div>
+      {/* Sticky summary: the three numbers that matter, the sync state, and Save. */}
+      <SummaryBar allInRatio={report.price.allInRatio.value} otdCents={report.price.otd.value} openFlags={openFlags}>
+        <div className="flex flex-col items-end gap-1">
+          <button type="button" className="btn btn-primary" onClick={save} disabled={pending || !online}>
+            {pending ? "Saving" : mode === "new" ? "Create deal" : "Save"}
+          </button>
+          <span className="max-w-40 truncate text-xs text-ink-2" role="status" aria-live="polite">
+            {!online ? "Offline: draft kept on this device" : sync === "dirty" ? "Unsaved changes" : sync === "saving" ? "Saving" : sync === "saved" ? "Saved" : sync === "error" ? "Not saved" : "\u00a0"}
+          </span>
         </div>
-      </div>
+      </SummaryBar>
 
       {draft && (
         <div className="card mt-4 flex flex-wrap items-center justify-between gap-3 p-3" role="status">
@@ -282,38 +265,38 @@ export function DealEditor({ mode, dealId, initial, previousOffer, context }: Pr
       {/* Sticker */}
       <Section title="Window sticker" open>
         <p className="mb-3 text-sm text-ink-2">Enter each printed line. The bottom line is Total SRP; the lines must add up to it.</p>
-        <LineTable>
+        <LineList empty="No sticker lines yet.">
           {form.sticker.lines.map((line) => (
-            <tr key={line.id}>
-              <td className="py-1 pr-2">
-                <input aria-label="Line label" className="field" value={line.label} onChange={(e) => updateStickerLine(update, line.id, { label: e.target.value })} />
-              </td>
-              <td className="py-1 pr-2">
-                <select aria-label="Sticker group" className="field" value={line.group} onChange={(e) => updateStickerLine(update, line.id, { group: e.target.value as StickerLine["group"] })}>
-                  <option value="base">Base MSRP</option>
-                  <option value="factory_option">Factory option</option>
-                  <option value="distributor_option">Distributor or port option</option>
-                  <option value="dph">DPH</option>
-                </select>
-              </td>
-              <td className="w-36 py-1 pr-2">
-                <MoneyInput compact label={`${line.label} amount`} value={line.cents} onChange={(c) => updateStickerLine(update, line.id, { cents: c })} />
-              </td>
-              <td className="py-1">
-                <button type="button" className="btn btn-quiet btn-sm" aria-label={`Remove ${line.label}`} onClick={() => update((f) => ({ ...f, sticker: { ...f.sticker, lines: f.sticker.lines.filter((l) => l.id !== line.id) } }))}>
-                  Remove
-                </button>
-              </td>
-            </tr>
+            <LineRow
+              key={line.id}
+              removeLabel={`Remove ${line.label}`}
+              onRemove={() => update((f) => ({ ...f, sticker: { ...f.sticker, lines: f.sticker.lines.filter((l) => l.id !== line.id) } }))}
+              note={
+                <>
+                  <input aria-label={`Note for ${line.label}`} className="field" placeholder="Note (optional)" value={line.note ?? ""} onChange={(e) => updateStickerLine(update, line.id, { note: e.target.value || undefined })} />
+                  <SourceSelect label={`Source of ${line.label}`} value={line.source} onChange={(v) => updateStickerLine(update, line.id, { source: v })} />
+                </>
+              }
+            >
+              <input aria-label="Line label" className="field" value={line.label} onChange={(e) => updateStickerLine(update, line.id, { label: e.target.value })} />
+              <select aria-label="Sticker group" className="field" value={line.group} onChange={(e) => updateStickerLine(update, line.id, { group: e.target.value as StickerLine["group"] })}>
+                <option value="base">Base MSRP</option>
+                <option value="factory_option">Factory option</option>
+                <option value="distributor_option">Distributor or port option</option>
+                <option value="dph">DPH</option>
+              </select>
+              <MoneyInput compact label={`${line.label} amount`} value={line.cents} onChange={(c) => updateStickerLine(update, line.id, { cents: c })} />
+              <span className="hidden sm:block" aria-hidden="true" />
+            </LineRow>
           ))}
-        </LineTable>
+        </LineList>
         <div className="mt-2 flex flex-wrap gap-2">
           {form.sticker.lines.length === 0 && (
             <button type="button" className="btn btn-sm" onClick={() => update((f) => ({ ...f, sticker: { ...f.sticker, lines: defaultStickerLines() } }))}>
               Start with base MSRP, DPH and option rows
             </button>
           )}
-          <button type="button" className="btn btn-sm" onClick={() => update((f) => ({ ...f, sticker: { ...f.sticker, lines: [...f.sticker.lines, { id: uid("sl"), label: "Option", cents: null, group: "factory_option", source: "sticker" }] } }))}>
+          <button type="button" className="btn btn-sm" onClick={() => update((f) => ({ ...f, sticker: { ...f.sticker, lines: [...f.sticker.lines, { id: uid("sl"), label: "Option", cents: null, group: "factory_option", source: "typed" }] } }))}>
             Add line
           </button>
         </div>
@@ -347,33 +330,42 @@ export function DealEditor({ mode, dealId, initial, previousOffer, context }: Pr
 
         <h3 className="mt-6 text-sm font-medium">Fees, add-ons, tax and rebates</h3>
         <p className="mb-2 text-xs text-ink-2">One line per item on the worksheet. Classify each; you can override whether it is taxed.</p>
-        <LineTable>
+        <LineList empty="No lines yet. Add each fee, add-on, tax and rebate from the worksheet.">
           {form.offer.lines.map((line) => (
-            <tr key={line.id}>
-              <td className="py-1 pr-2">
-                <input aria-label="Line label" className="field" value={line.label} onChange={(e) => updateOfferLine(setOffer, line.id, { label: e.target.value })} />
-              </td>
-              <td className="py-1 pr-2">
-                <select aria-label="Category" className="field" value={line.category} onChange={(e) => updateOfferLine(setOffer, line.id, { category: e.target.value as LineCategory })}>
-                  {(Object.keys(CATEGORY_LABEL) as LineCategory[]).map((c) => (
-                    <option key={c} value={c}>
-                      {CATEGORY_LABEL[c]}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td className="w-36 py-1 pr-2">
-                <MoneyInput compact label={`${line.label} amount`} value={line.cents} onChange={(c) => updateOfferLine(setOffer, line.id, { cents: c })} />
-              </td>
-              <td className="py-1 pr-2">
+            <LineRow
+              key={line.id}
+              removeLabel={`Remove ${line.label}`}
+              onRemove={() => setOffer((o) => ({ ...o, lines: o.lines.filter((l) => l.id !== line.id) }))}
+              note={
+                <>
+                  <input aria-label={`Note for ${line.label}`} className="field" placeholder="Note (optional)" value={line.note ?? ""} onChange={(e) => updateOfferLine(setOffer, line.id, { note: e.target.value || undefined })} />
+                  <SourceSelect label={`Source of ${line.label}`} value={line.source} onChange={(v) => updateOfferLine(setOffer, line.id, { source: v })} />
+                </>
+              }
+            >
+              <input aria-label="Line label" className="field" value={line.label} onChange={(e) => updateOfferLine(setOffer, line.id, { label: e.target.value })} />
+              <select aria-label="Category" className="field" value={line.category} onChange={(e) => updateOfferLine(setOffer, line.id, { category: e.target.value as LineCategory })}>
+                {(Object.keys(CATEGORY_LABEL) as LineCategory[]).map((c) => (
+                  <option key={c} value={c}>
+                    {CATEGORY_LABEL[c]}
+                  </option>
+                ))}
+              </select>
+              <MoneyInput compact label={`${line.label} amount`} value={line.cents} onChange={(c) => updateOfferLine(setOffer, line.id, { cents: c })} />
+              <div>
                 {line.category === "manufacturer_rebate" || line.category === "conditional_rebate" ? (
                   <select aria-label="Where the rebate is applied" className="field" value={line.applied ?? ""} onChange={(e) => updateOfferLine(setOffer, line.id, { applied: (e.target.value || null) as OfferLine["applied"] })}>
                     <option value="">Applied where?</option>
                     <option value="after_price">After selling price</option>
                     <option value="in_price">Folded into price</option>
                   </select>
-                ) : line.category === "tax" || line.category === "dealer_discount" ? (
-                  <span className="text-xs text-ink-2">n/a</span>
+                ) : line.category === "tax" || line.category === "dealer_discount" || line.category === "other" ? (
+                  <span className="text-xs text-ink-2">{line.category === "other" ? "Not in totals" : "n/a"}</span>
+                ) : line.category === "dealer_addon" ? (
+                  <label className="tap flex items-center gap-2 text-xs">
+                    <input type="checkbox" checked={!!line.onSticker} onChange={(e) => updateOfferLine(setOffer, line.id, { onSticker: e.target.checked })} />
+                    Printed on the sticker (already in the price)
+                  </label>
                 ) : (
                   <select aria-label="Taxable" className="field" value={line.taxable === null ? "" : line.taxable ? "yes" : "no"} onChange={(e) => updateOfferLine(setOffer, line.id, { taxable: e.target.value === "" ? null : e.target.value === "yes" })}>
                     <option value="">Taxable: rule default ({context.taxRule.taxableByCategory[line.category] ? "yes" : "no"})</option>
@@ -381,18 +373,13 @@ export function DealEditor({ mode, dealId, initial, previousOffer, context }: Pr
                     <option value="no">Taxable: no</option>
                   </select>
                 )}
-              </td>
-              <td className="py-1">
-                <button type="button" className="btn btn-quiet btn-sm" aria-label={`Remove ${line.label}`} onClick={() => setOffer((o) => ({ ...o, lines: o.lines.filter((l) => l.id !== line.id) }))}>
-                  Remove
-                </button>
-              </td>
-            </tr>
+              </div>
+            </LineRow>
           ))}
-        </LineTable>
+        </LineList>
         <div className="mt-2 flex flex-wrap gap-2">
           {QUICK_LINES.map((q) => (
-            <button key={q.label} type="button" className="btn btn-sm" onClick={() => setOffer((o) => ({ ...o, lines: [...o.lines, { id: uid("ol"), label: q.label, cents: null, category: q.category, taxable: q.taxable, source: "worksheet", applied: q.category === "manufacturer_rebate" ? null : undefined }] }))}>
+            <button key={q.label} type="button" className="btn btn-sm" onClick={() => setOffer((o) => ({ ...o, lines: [...o.lines, { id: uid("ol"), label: q.label, cents: null, category: q.category, taxable: q.taxable, source: "typed", applied: q.category === "manufacturer_rebate" ? null : undefined }] }))}>
               + {q.label}
             </button>
           ))}
@@ -516,27 +503,26 @@ function Section({ title, open = false, children }: { title: string; open?: bool
     <details open={open} className="card mt-4 p-4">
       <summary className="tap -m-1 flex cursor-pointer list-none items-center justify-between rounded-sm p-1 text-lg font-medium">
         <span className="serif">{title}</span>
-        <span aria-hidden="true" className="text-ink-2">
-          +
-        </span>
+        <span aria-hidden="true" className="marker text-ink-2" />
       </summary>
       <div className="mt-3">{children}</div>
     </details>
   );
 }
 
-function LineTable({ children }: { children: React.ReactNode }) {
+function SourceSelect({ label, value, onChange }: { label: string; value: Source; onChange: (v: Source) => void }) {
   return (
-    <div className="-mx-4 overflow-x-auto px-4">
-      <table className="w-full min-w-[640px] text-sm">
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+    <select aria-label={label} className="field" value={value} onChange={(e) => onChange(e.target.value as Source)}>
+      <option value="typed">Source: typed</option>
+      <option value="sticker">Source: window sticker</option>
+      <option value="worksheet">Source: dealer worksheet</option>
+      <option value="assumption">Source: assumption</option>
+    </select>
   );
 }
 
 function Text({ label, value, onChange, type = "text", hint, error, required, autoFocus }: { label: string; value: string; onChange: (v: string) => void; type?: string; hint?: string; error?: string; required?: boolean; autoFocus?: boolean }) {
-  const id = `f-${label.replace(/\W+/g, "-").toLowerCase()}`;
+  const id = useId();
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-sm font-medium">
@@ -554,7 +540,7 @@ function Text({ label, value, onChange, type = "text", hint, error, required, au
 
 function PercentInput({ label, value, onChange }: { label: string; value: number | null; onChange: (v: number | null) => void }) {
   const [text, setText] = useState(value === null ? "" : (value * 100).toString());
-  const id = `p-${label.replace(/\W+/g, "-").toLowerCase()}`;
+  const id = useId();
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-sm font-medium">
@@ -606,7 +592,7 @@ function VinField({ value, check, decoded, entered, onChange, onDecoded, onUse }
         VIN
       </label>
       <div className="mt-1 flex gap-2">
-        <input id="vin" className="field num uppercase" value={value} autoCapitalize="characters" autoComplete="off" spellCheck={false} maxLength={17} aria-describedby="vin-status" onChange={(e) => onChange(e.target.value)} />
+        <input id="vin" className="field num uppercase" value={value} autoCapitalize="characters" autoComplete="off" spellCheck={false} maxLength={17} aria-describedby="vin-status" aria-invalid={check && !check.valid ? "true" : undefined} onChange={(e) => onChange(e.target.value)} />
         <button type="button" className="btn" onClick={decode} disabled={busy || !check || check.vin.length !== 17}>
           {busy ? "Decoding" : "Decode"}
         </button>
@@ -640,8 +626,8 @@ function VinField({ value, check, decoded, entered, onChange, onDecoded, onUse }
               ).map(([field, label, a, b]) => (
                 <tr key={field} className="border-t border-line">
                   <td className="py-1 pr-2 text-ink-2">{label}</td>
-                  <td className="py-1 pr-2">{a ?? "—"}</td>
-                  <td className="py-1 pr-2">{b ?? "—"}</td>
+                  <td className="py-1 pr-2">{a ?? "not entered"}</td>
+                  <td className="py-1 pr-2">{b ?? "not decoded"}</td>
                   <td className="py-1 text-right">
                     {b !== null && b !== undefined && String(a ?? "") !== String(b) && (
                       <button type="button" className="btn btn-quiet btn-sm" onClick={() => onUse(field, b as string | number)}>
@@ -655,7 +641,7 @@ function VinField({ value, check, decoded, entered, onChange, onDecoded, onUse }
                 <td className="py-1 pr-2 text-ink-2">Drive</td>
                 <td className="py-1 pr-2" />
                 <td className="py-1 pr-2" colSpan={2}>
-                  {decoded.driveType ?? "—"}
+                  {decoded.driveType ?? "not decoded"}
                 </td>
               </tr>
             </tbody>

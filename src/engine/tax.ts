@@ -1,9 +1,15 @@
-import { derived, input, mulRate, sumKnown } from "./money";
+import { derived, formatApr, input, mulRate, sumKnown } from "./money";
 import type { Cents, Derived, DerivationInput, Offer, OfferLine, Sticker, TaxCandidate, TaxRule, TradeProfile } from "./types";
 
+/** Lines that never enter any total: tax lines, rebates, printed discounts, "other" (informational), and add-ons already printed on the sticker. */
+export function isInformational(line: OfferLine): boolean {
+  if (line.category === "tax" || line.category === "manufacturer_rebate" || line.category === "conditional_rebate" || line.category === "dealer_discount" || line.category === "other") return true;
+  if (line.category === "dealer_addon" && line.onSticker) return true;
+  return false;
+}
+
 export function isTaxable(line: OfferLine, rule: TaxRule): boolean {
-  if (line.category === "tax") return false;
-  if (line.category === "manufacturer_rebate" || line.category === "conditional_rebate" || line.category === "dealer_discount") return false;
+  if (isInformational(line)) return false;
   if (line.taxable !== null && line.taxable !== undefined) return line.taxable;
   return rule.taxableByCategory[line.category];
 }
@@ -38,6 +44,8 @@ export interface BaseResult {
   cents: Cents | null;
   inputs: DerivationInput[];
   formula: string;
+  /** Labels of selected lines that have no amount yet; when non-empty, cents is null. */
+  unknown: string[];
 }
 
 export function taxableBase(
@@ -54,24 +62,28 @@ export function taxableBase(
 
   const inputs: DerivationInput[] = [];
   const parts: string[] = [];
+  const unknown: string[] = [];
   const start = useSticker ? sticker.totalSrpCents : offer.sellingPriceCents;
-  if (start === null) return { cents: null, inputs, formula: useSticker ? "total SRP" : "selling price" };
+  if (start === null) return { cents: null, inputs, formula: useSticker ? "total SRP" : "selling price", unknown: [useSticker ? "total SRP" : "selling price"] };
   inputs.push(input(useSticker ? "Total SRP" : "Selling price", start, "cents", useSticker ? "sticker" : "typed"));
   parts.push(useSticker ? "total SRP" : "selling price");
   let base = start;
 
   const candidates = offer.lines.filter((l) => {
-    if (l.category === "tax" || l.category === "manufacturer_rebate" || l.category === "conditional_rebate" || l.category === "dealer_discount") return false;
+    if (isInformational(l)) return false;
     if (opts.excludeAddons && l.category === "dealer_addon") return false;
     if (lineMode === "none") return false;
     if (lineMode === "all") return true;
     return isTaxable(l, rule);
   });
   for (const l of candidates) {
-    if (l.cents === null) continue;
-    base += l.cents;
     inputs.push(input(l.label, l.cents, "cents", l.source));
     parts.push(l.label);
+    if (l.cents === null) {
+      unknown.push(l.label);
+      continue;
+    }
+    base += l.cents;
   }
 
   if (includeTrade) {
@@ -91,14 +103,14 @@ export function taxableBase(
     }
   }
 
-  return { cents: Math.max(base, 0), inputs, formula: parts.join(" + ").replace(/\+ -/g, "-") };
+  return { cents: unknown.length > 0 ? null : Math.max(base, 0), inputs, formula: parts.join(" + ").replace(/\+ -/g, "-"), unknown };
 }
 
 export function statedTaxCents(offer: Offer): Cents | null {
   const lines = offer.lines.filter((l) => l.category === "tax");
   if (lines.length === 0) return null;
   const s = sumKnown(lines.map((l) => l.cents));
-  return s.unknown > 0 && s.total === 0 ? null : s.total;
+  return s.unknown > 0 ? null : s.total;
 }
 
 export interface TaxAudit {
@@ -119,14 +131,15 @@ export function auditTax(offer: Offer, sticker: Sticker, rule: TaxRule, trade: T
   const correct = taxableBase(offer, sticker, rule, trade);
   const rateInput = input(`${rule.name} rate`, rule.rate, "rate", "setting");
 
-  const taxableBaseD = derived("tax.base", "Taxable base", correct.cents, "cents", correct.formula, correct.inputs);
+  const taxableBaseD = derived("tax.base", "Taxable base", correct.cents, "cents", correct.formula, correct.inputs, correct.unknown.length > 0 ? `Not yet quoted: ${correct.unknown.join(", ")}` : undefined);
+  const rateText = formatApr(rule.rate, 2);
   const computed = correct.cents === null ? null : mulRate(correct.cents, rule.rate, rule.ratePrecision);
   const computedTax = derived(
     "tax.computed",
     `Computed ${rule.name}`,
     computed,
     "cents",
-    `taxable base x ${rule.rate * 100}% (rounded half up to the cent)`,
+    `taxable base x ${rateText} (rounded half up to the cent)`,
     [input("Taxable base", correct.cents, "cents", "computed"), rateInput],
   );
 
@@ -137,7 +150,7 @@ export function auditTax(offer: Offer, sticker: Sticker, rule: TaxRule, trade: T
     `Computed ${rule.name} without dealer add-ons`,
     computedNoAddons,
     "cents",
-    `(${noAddons.formula}) x ${rule.rate * 100}%`,
+    `(${noAddons.formula}) x ${rateText}`,
     [...noAddons.inputs, rateInput],
   );
 
@@ -165,14 +178,20 @@ export function auditTax(offer: Offer, sticker: Sticker, rule: TaxRule, trade: T
     { code: "all_fees_no_trade", label: "Every fee included (even non-taxable), no trade credit", opts: { lines: "all", includeTrade: false } },
     { code: "all_fees_with_trade", label: "Every fee included (even non-taxable)", opts: { lines: "all" } },
   ];
+  // The audit only runs when the correct base is fully known; a candidate whose base equals the
+  // correct base is not an "error" and is dropped so it can never be blamed.
   const candidates: TaxCandidate[] = [];
-  for (const def of candidateDefs) {
-    const b = taxableBase(offer, sticker, rule, trade, def.opts);
-    if (b.cents === null) continue;
-    const t = mulRate(b.cents, rule.rate, rule.ratePrecision);
-    candidates.push({ code: def.code, label: def.label, baseCents: b.cents, taxCents: t, matches: stated !== null && nearlyEqual(stated, t) });
+  if (correct.cents !== null) {
+    for (const def of candidateDefs) {
+      const b = taxableBase(offer, sticker, rule, trade, def.opts);
+      if (b.cents === null) continue;
+      if (def.code !== "correct" && b.cents === correct.cents) continue;
+      const t = mulRate(b.cents, rule.rate, rule.ratePrecision);
+      candidates.push({ code: def.code, label: def.label, baseCents: b.cents, taxCents: t, matches: stated !== null && nearlyEqual(stated, t) });
+    }
   }
-  const likelyError = stated === null ? null : (candidates.find((c) => c.matches && c.code !== "correct") ?? null);
+  const correctMatches = candidates.some((c) => c.code === "correct" && c.matches);
+  const likelyError = stated === null || correctMatches ? null : (candidates.find((c) => c.matches && c.code !== "correct") ?? null);
 
   return { taxableBase: taxableBaseD, computedTax, computedTaxNoAddons, statedTax, difference, candidates, likelyError };
 }

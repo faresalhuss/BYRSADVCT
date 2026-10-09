@@ -35,7 +35,9 @@ export function MoneyInput({ label, value, onChange, placeholder = "Not yet quot
     if (!focused) setText(value === null ? "" : formatCents(value, { symbol: false }));
   }
 
-  const invalid = text.trim() !== "" && parseMoney(text) === null;
+  const parsedNow = parseMoney(text);
+  const invalid = text.trim() !== "" && parsedNow === null;
+  const signDropped = !allowNegative && parsedNow !== null && parsedNow < 0;
 
   return (
     <div className={compact ? "" : "flex flex-col gap-1"}>
@@ -59,7 +61,7 @@ export function MoneyInput({ label, value, onChange, placeholder = "Not yet quot
           placeholder={placeholder}
           required={required}
           aria-invalid={invalid || !!error ? "true" : undefined}
-          aria-describedby={hint || error ? `${inputId}-desc` : undefined}
+          aria-describedby={hint || error || signDropped ? `${inputId}-desc` : undefined}
           onFocus={() => setFocused(true)}
           onBlur={() => {
             setFocused(false);
@@ -81,9 +83,9 @@ export function MoneyInput({ label, value, onChange, placeholder = "Not yet quot
           }}
         />
       </div>
-      {(hint || error) && (
+      {(hint || error || signDropped) && (
         <p id={`${inputId}-desc`} className={`text-xs ${error ? "text-flag" : "text-ink-2"}`}>
-          {error ?? hint}
+          {error ?? (signDropped ? "Entered as a positive amount; this field has no negative values." : hint)}
         </p>
       )}
     </div>
