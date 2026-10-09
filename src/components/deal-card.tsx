@@ -5,6 +5,7 @@ import type { DealReport, OverallRow } from "@/engine";
 import { formatDate } from "@/lib/dates";
 import { Money, Pct } from "./money";
 import { StatusPill, VerdictPill } from "./pills";
+import { Term } from "./term";
 
 export function DealCard({ deal, report, rank, overall }: { deal: DealRow; report: DealReport; rank: number | null; overall: OverallRow | null }) {
   const v = parseVehicle(deal.vehicle);
@@ -27,13 +28,17 @@ export function DealCard({ deal, report, rank, overall }: { deal: DealRow; repor
       </div>
       <dl className="mt-4 grid grid-cols-3 gap-2">
         <div className="metric">
-          <dt className="eyebrow">All-in % SRP</dt>
+          <dt className="eyebrow">
+            <Term k="all_in">All-in % SRP</Term>
+          </dt>
           <dd className="metric-value num text-xl">
             <Pct value={report.price.allInRatio.value} label="All-in as percent of total SRP" />
           </dd>
         </div>
         <div className="metric">
-          <dt className="eyebrow">Out the door</dt>
+          <dt className="eyebrow">
+            <Term k="otd">Out the door</Term>
+          </dt>
           <dd className="metric-value num text-xl">
             <Money cents={report.price.otd.value} label="Out the door" showCents={false} />
           </dd>

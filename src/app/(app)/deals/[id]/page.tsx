@@ -77,23 +77,23 @@ async function Deal({ params }: { params: PageProps<"/deals/[id]">["params"] }) 
             <Icon.Arrow size={14} className="rotate-[-45deg]" /> Website
           </a>
         )}
-        <span className="flex flex-wrap gap-x-4 text-ink-3">
-          <Link href={`/deals/${id}/revisions`} className="hover:text-ink">
+        <span className="flex flex-wrap gap-1 text-ink-2">
+          <Link href={`/deals/${id}/revisions`} className="btn btn-quiet btn-sm">
             Revisions ({d.revisions.length})
           </Link>
-          <Link href={`/deals/${id}/print`} className="hover:text-ink">
+          <Link href={`/deals/${id}/print`} className="btn btn-quiet btn-sm">
             Print summary
           </Link>
-          <Link href={`/compare?ids=${id}`} className="hover:text-ink">
+          <Link href={`/compare?ids=${id}`} className="btn btn-quiet btn-sm">
             Compare
           </Link>
           <form action={duplicateDeal.bind(null, id)} className="inline">
-            <button type="submit" className="hover:text-ink">
+            <button type="submit" className="btn btn-quiet btn-sm">
               Duplicate
             </button>
           </form>
           <ConfirmForm action={setArchived.bind(null, id, !archived)} message={archived ? "Unarchive this deal?" : "Archive this deal? It moves to the Archived list."} className="inline">
-            <button type="submit" className="hover:text-ink">
+            <button type="submit" className="btn btn-quiet btn-sm">
               {archived ? "Unarchive" : "Archive"}
             </button>
           </ConfirmForm>

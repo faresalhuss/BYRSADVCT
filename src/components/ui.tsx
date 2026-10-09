@@ -55,7 +55,7 @@ export function Metric({ label, children, hint, size = "md", className = "" }: {
 
 export function EmptyState({ title, children, action }: { title: ReactNode; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="card flex flex-col items-start gap-2 p-6">
+    <div className="empty flex flex-col items-start gap-2 p-6">
       <p className="font-medium">{title}</p>
       {children && <p className="text-sm text-ink-2">{children}</p>}
       {action && <div className="mt-2">{action}</div>}

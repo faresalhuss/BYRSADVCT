@@ -6,7 +6,7 @@ import { MoneyInput } from "@/components/editor/money-input";
 import { US_STATES } from "@/content/states";
 import { createInquiry, updateInquiry } from "@/db/inquiry-actions";
 import type { InquiryForm } from "@/domain/schemas";
-import { checkVin, formatPercent } from "@/engine";
+import { checkVin, formatPercent, ratio } from "@/engine";
 
 export function InquiryEditor({ mode, id, initial }: { mode: "new" | "edit"; id: string | null; initial: InquiryForm }) {
   const router = useRouter();
@@ -15,7 +15,7 @@ export function InquiryEditor({ mode, id, initial }: { mode: "new" | "edit"; id:
   const [issues, setIssues] = useState<Record<string, string>>({});
   const [pending, start] = useTransition();
   const vin = checkVin(form.vehicle.vin);
-  const ratio = form.advertisedPriceCents !== null && form.msrpCents ? form.advertisedPriceCents / form.msrpCents : null;
+  const pct = ratio(form.advertisedPriceCents, form.msrpCents);
 
   function save() {
     setError(null);
@@ -73,7 +73,7 @@ export function InquiryEditor({ mode, id, initial }: { mode: "new" | "edit"; id:
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <MoneyInput label="Advertised price" value={form.advertisedPriceCents} onChange={(c) => setForm((f) => ({ ...f, advertisedPriceCents: c }))} hint="The internet price on the listing. Becomes the starting selling price when converted." />
-            <MoneyInput label="Total SRP / MSRP on the listing" value={form.msrpCents} onChange={(c) => setForm((f) => ({ ...f, msrpCents: c }))} hint={ratio !== null ? `Advertised is ${formatPercent(ratio)} of sticker.` : undefined} />
+            <MoneyInput label="Total SRP / MSRP on the listing" value={form.msrpCents} onChange={(c) => setForm((f) => ({ ...f, msrpCents: c }))} hint={pct !== null ? `Advertised is ${formatPercent(pct)} of sticker.` : undefined} />
           </div>
           <Field label="Stock date (if shown)" type="date" value={form.vehicle.stockDate ?? ""} onChange={(v) => setForm((f) => ({ ...f, vehicle: { ...f.vehicle, stockDate: v || null } }))} />
           <label className="flex flex-col gap-1">

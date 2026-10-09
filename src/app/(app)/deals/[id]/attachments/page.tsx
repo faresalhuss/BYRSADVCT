@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui";
 import { ConfirmForm } from "@/components/confirm-form";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -13,7 +14,7 @@ import { Thumb } from "./viewer";
 export default function AttachmentsPage(props: PageProps<"/deals/[id]/attachments">) {
   return (
     <main>
-      <Suspense fallback={<p className="text-ink-2">Loading</p>}>
+      <Suspense fallback={<div className="skeleton h-40" aria-hidden="true" />}>
         <Attachments params={props.params} />
       </Suspense>
     </main>
@@ -28,13 +29,7 @@ async function Attachments({ params }: { params: PageProps<"/deals/[id]/attachme
   const kindLabel = (k: string) => ATTACHMENT_KINDS.find((x) => x.value === k)?.label ?? k;
   return (
     <>
-      <p className="text-sm">
-        <Link href={`/deals/${id}`} className="underline">
-          {d.deal.dealership_name}
-        </Link>
-      </p>
-      <h1 className="mt-1">Attachments</h1>
-      <p className="mt-1 text-sm text-ink-2">Window stickers, worksheets, buyer&apos;s orders and photos. PDF, JPEG, PNG or HEIC, up to 25 MB each. Stored privately.</p>
+      <PageHeader crumb={{ href: `/deals/${id}`, label: d.deal.dealership_name }} title="Attachments" description="Window stickers, worksheets, buyer's orders and photos. PDF, JPEG, PNG or HEIC, up to 25 MB each. Stored privately." />
       <Uploader dealId={id} />
       {rows.length === 0 ? (
         <p className="mt-6 text-sm text-ink-2">Nothing attached yet. Photograph the window sticker and the worksheet first.</p>

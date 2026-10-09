@@ -17,10 +17,10 @@ export function Term({ k, children }: { k: string; children?: React.ReactNode })
   const popId = `term-${id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   return (
     <>
-      <button type="button" className="term" popoverTarget={popId}>
+      <button type="button" className="term" popoverTarget={popId} aria-haspopup="dialog">
         {children ?? entry.term}
       </button>
-      <span id={popId} popover="auto" role="dialog" aria-label={`${entry.term}, explained`} className="panel m-auto block w-[min(92vw,26rem)] p-4 text-left text-sm font-normal normal-case tracking-normal text-ink shadow-[var(--shadow)] backdrop:bg-black/50">
+      <span id={popId} popover="auto" role="dialog" aria-label={`${entry.term}, explained`} className="panel m-auto w-[min(92vw,26rem)] p-4 text-left text-sm font-normal normal-case tracking-normal text-ink shadow-[var(--shadow)] backdrop:bg-black/50">
         <span className="eyebrow block">Term</span>
         <span className="mt-1 block text-base font-semibold">{entry.term}</span>
         <span className="mt-1 block text-ink-2">{entry.short}</span>

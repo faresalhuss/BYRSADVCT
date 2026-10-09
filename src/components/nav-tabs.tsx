@@ -45,7 +45,7 @@ function TabList({ variant, path }: { variant: "side" | "bottom"; path: string |
         const I = t.icon;
         return (
           <li key={t.href}>
-            <Link href={t.href} aria-current={active ? "page" : undefined} className={`flex h-14 flex-col items-center justify-center gap-1 text-[10px] font-medium ${active ? "text-accent" : "text-ink-3"}`}>
+            <Link href={t.href} aria-current={active ? "page" : undefined} className={`flex h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium ${active ? "text-accent" : "text-ink-3"}`}>
               <I size={20} />
               {t.label}
             </Link>
@@ -53,18 +53,18 @@ function TabList({ variant, path }: { variant: "side" | "bottom"; path: string |
         );
       })}
       <li>
-        <button type="button" popoverTarget="more-nav" className={`flex h-14 w-full flex-col items-center justify-center gap-1 text-[10px] font-medium ${moreActive ? "text-accent" : "text-ink-3"}`} aria-haspopup="menu">
+        <button type="button" popoverTarget="more-nav" className={`flex h-14 w-full flex-col items-center justify-center gap-1 text-[11px] font-medium ${moreActive ? "text-accent" : "text-ink-3"}`} aria-haspopup="dialog">
           <Icon.More size={20} />
           More
         </button>
-        <div id="more-nav" popover="auto" className="panel mx-auto mb-16 mt-auto w-[min(92vw,22rem)] p-2 backdrop:bg-black/40">
+        <div id="more-nav" popover="auto" role="dialog" aria-label="More pages" className="panel mx-auto mb-16 mt-auto w-[min(92vw,22rem)] p-2 backdrop:bg-black/40">
           <ul className="flex flex-col">
             {more.map((t) => {
               const active = path !== null && t.match(path);
               const I = t.icon;
               return (
                 <li key={t.href}>
-                  <Link href={t.href} aria-current={active ? "page" : undefined} className="nav-item tap" popoverTarget="more-nav" popoverTargetAction="hide">
+                  <Link href={t.href} aria-current={active ? "page" : undefined} className="nav-item tap" onClick={() => document.getElementById("more-nav")?.hidePopover()}>
                     <I size={17} />
                     {t.label}
                   </Link>

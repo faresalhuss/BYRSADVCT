@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PageHeader } from "@/components/ui";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { diffOffers, formatCents, formatApr } from "@/engine";
@@ -8,7 +8,7 @@ import { formatDateTime } from "@/lib/dates";
 export default function RevisionsPage(props: PageProps<"/deals/[id]/revisions">) {
   return (
     <main>
-      <Suspense fallback={<p className="text-ink-2">Loading</p>}>
+      <Suspense fallback={<div className="skeleton h-40" aria-hidden="true" />}>
         <Revisions params={props.params} />
       </Suspense>
     </main>
@@ -22,13 +22,7 @@ async function Revisions({ params }: { params: PageProps<"/deals/[id]/revisions"
   const revisions = d.revisions; // newest first
   return (
     <>
-      <p className="text-sm">
-        <Link href={`/deals/${id}`} className="underline">
-          {d.deal.dealership_name}
-        </Link>
-      </p>
-      <h1 className="mt-1">Revisions</h1>
-      <p className="mt-1 text-sm text-ink-2">Every saved offer, diffed line by line against the one before it.</p>
+      <PageHeader crumb={{ href: `/deals/${id}`, label: d.deal.dealership_name }} title="Revisions" description="Every saved offer, diffed line by line against the one before it." />
       <ol className="mt-4 flex flex-col gap-4">
         {revisions.map((rev, i) => {
           const prev = revisions[i + 1] ?? null;

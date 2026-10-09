@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PageHeader } from "@/components/ui";
 import { ConfirmForm } from "@/components/confirm-form";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -10,7 +10,7 @@ import { NoteForm } from "./note-form";
 export default function NotesPage(props: PageProps<"/deals/[id]/notes">) {
   return (
     <main>
-      <Suspense fallback={<p className="text-ink-2">Loading</p>}>
+      <Suspense fallback={<div className="skeleton h-40" aria-hidden="true" />}>
         <Notes params={props.params} />
       </Suspense>
     </main>
@@ -23,13 +23,7 @@ async function Notes({ params }: { params: PageProps<"/deals/[id]/notes">["param
   if (!d) notFound();
   return (
     <>
-      <p className="text-sm">
-        <Link href={`/deals/${id}`} className="underline">
-          {d.deal.dealership_name}
-        </Link>
-      </p>
-      <h1 className="mt-1">Notes</h1>
-      <p className="mt-1 text-sm text-ink-2">What was said, by whom, and whether it was verbal or in writing.</p>
+      <PageHeader crumb={{ href: `/deals/${id}`, label: d.deal.dealership_name }} title="Notes" description="What was said, by whom, and whether it was verbal or in writing." />
       <NoteForm dealId={id} defaultWho={d.deal.salesperson} />
       {notes.length === 0 ? (
         <p className="mt-6 text-sm text-ink-2">No notes yet. Log the first conversation above.</p>

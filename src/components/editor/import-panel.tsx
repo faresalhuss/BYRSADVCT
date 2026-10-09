@@ -91,7 +91,7 @@ export function ImportPanel({ enabled, batchId, onExtracted, files, onFiles }: {
   }
 
   return (
-    <section className="card card-accent p-4 sm:p-5" aria-labelledby="import-h">
+    <section className="card p-4 sm:p-5" aria-labelledby="import-h">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="import-h" className="flex items-center gap-2">
@@ -111,7 +111,7 @@ export function ImportPanel({ enabled, batchId, onExtracted, files, onFiles }: {
             <li key={f.path} className="flex items-center gap-2 rounded-md border border-line bg-surface-2 px-2.5 py-1.5 text-xs">
               <Icon.File size={14} className="text-ink-3" />
               <span className="max-w-48 truncate">{f.name}</span>
-              <button type="button" className="text-ink-3 hover:text-flag" aria-label={`Remove ${f.name}`} onClick={() => onFiles(files.filter((x) => x.path !== f.path))}>
+              <button type="button" className="tap -my-2 -mr-2 inline-flex items-center justify-center text-ink-3 hover:text-flag" aria-label={`Remove ${f.name}`} onClick={() => onFiles(files.filter((x) => x.path !== f.path))}>
                 &times;
               </button>
             </li>

@@ -25,3 +25,4 @@ One line per lesson. Corrections and confirmed approaches alike. Why each matter
 - Zip 30305 is Southeast Toyota territory: national TFS college/military rebates are explicitly unavailable in GA; the SETF versions ($500 each, stack with special APR, not with each other) apply instead.
 - A Suspense fallback must not call `usePathname()` itself; the "static" nav variant has to be hook-free or the build fails prerendering.
 - Vercel bodies cap at 4.5 MB, so the multi-document import uploads to `imports/<batch>/` from the browser, reads them server-side in one Claude call, and moves them into `deals/<id>/` when the deal is created.
+- A closed `[popover]` element must never get a `display` utility class (`block`): it overrides the UA `display: none`, leaving an invisible fixed layer that intercepts taps across the page. Guarded with `[popover]:not(:popover-open) { display: none !important }`.

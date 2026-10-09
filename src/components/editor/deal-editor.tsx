@@ -26,6 +26,8 @@ import {
 import { SeverityPill } from "@/components/pills";
 import { Term } from "@/components/term";
 import { Explain } from "@/components/ui";
+import { Icon } from "@/components/icons";
+import { VerdictPill } from "@/components/pills";
 import { ImportPanel, type ImportedFile } from "./import-panel";
 import type { Extraction } from "@/lib/anthropic";
 import { Money } from "@/components/money";
@@ -248,6 +250,8 @@ export function DealEditor({ mode, dealId, initial, previousOffer, context }: Pr
         </p>
       )}
 
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-6">
+      <div className="min-w-0">
       {mode === "new" && (
         <div className="mt-4">
           <ImportPanel enabled={context.importEnabled} batchId={batchId} files={importFiles} onFiles={setImportFiles} onExtracted={(x) => applyExtraction(x, update)} />
@@ -599,6 +603,56 @@ export function DealEditor({ mode, dealId, initial, previousOffer, context }: Pr
           {pending ? "Saving" : mode === "new" ? "Create deal" : "Save"}
         </button>
       </div>
+      </div>
+
+      {/* Desktop: live audit rail that stays in view while typing. */}
+      <aside className="hidden lg:block lg:sticky lg:top-20 lg:mt-4" aria-label="Live audit">
+        <div className="card p-4">
+          <div className="flex items-center justify-between gap-2">
+            <VerdictPill band={report.verdict.band} />
+            {report.verdict.score !== null && <span className="mono text-xs text-ink-3">score {report.verdict.score}/100</span>}
+          </div>
+          <p className="mt-2 text-sm">{report.verdict.headline}</p>
+          <dl className="mt-4 grid gap-3">
+            <div className="flex items-baseline justify-between">
+              <dt className="eyebrow">All-in</dt>
+              <dd className="num text-lg font-semibold">{formatCents(report.price.allIn.value)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <dt className="eyebrow">Discount off SRP</dt>
+              <dd className="num">{formatCents(report.price.discountOffSrp.value)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <dt className="eyebrow">Computed tax</dt>
+              <dd className="num">{formatCents(report.tax.computedTax.value)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <dt className="eyebrow">Tax difference</dt>
+              <dd className={`num ${report.tax.difference.value !== null && Math.abs(report.tax.difference.value) > 1 ? "text-flag" : ""}`}>{formatCents(report.tax.difference.value)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <dt className="eyebrow">Corrected balance</dt>
+              <dd className="num">{formatCents(report.tax.correctedBalance.value)}</dd>
+            </div>
+          </dl>
+          {report.missing.length > 0 && <p className="mt-3 text-xs text-caution">Not yet quoted: {report.missing.slice(0, 4).join(", ")}{report.missing.length > 4 ? ` and ${report.missing.length - 4} more` : ""}.</p>}
+          {report.flags.length > 0 && (
+            <ul className="mt-4 flex flex-col gap-2 border-t border-line pt-3">
+              {report.flags.slice(0, 6).map((f) => (
+                <li key={f.id} className="flex items-start gap-2 text-xs">
+                  <SeverityPill severity={f.severity} />
+                  <span className="min-w-0">
+                    <span className="block font-medium leading-snug">{f.title}</span>
+                    {f.impactCents !== null && <span className="num text-ink-2">{formatCents(f.impactCents)}</span>}
+                  </span>
+                </li>
+              ))}
+              {report.flags.length > 6 && <li className="text-xs text-ink-3">and {report.flags.length - 6} more below</li>}
+            </ul>
+          )}
+        </div>
+      </aside>
+      </div>
     </div>
   );
 }
@@ -734,7 +788,9 @@ function Section({ title, open = false, intro, children }: { title: string; open
           <span className="block text-base font-semibold">{title}</span>
           {intro && <span className="block text-sm font-normal text-ink-2">{intro}</span>}
         </span>
-        <span aria-hidden="true" className="marker text-ink-3" />
+        <span aria-hidden="true" className="marker text-ink-3">
+          <Icon.Chevron size={16} />
+        </span>
       </summary>
       <div className="mt-3">{children}</div>
     </details>

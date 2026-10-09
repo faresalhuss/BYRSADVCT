@@ -15,9 +15,9 @@
   --surface-3: #1f1f26;
   --ink: #f4f4f5;
   --ink-2: #a1a1aa;
-  --ink-3: #71717a;
+  --ink-3: #8a8a94;
   --line: #27272a;
-  --line-strong: #3f3f46;
+  --line-strong: #62626c;
   --accent: #3ecf8e;
   --accent-hover: #4ade9b;
   --accent-ink: #052e1b;
@@ -51,25 +51,25 @@
   --surface-3: #e9e9ec;
   --ink: #09090b;
   --ink-2: #52525b;
-  --ink-3: #71717a;
+  --ink-3: #6b6b74;
   --line: #e4e4e7;
-  --line-strong: #a1a1aa;
-  --accent: #0f9d63;
-  --accent-hover: #0b8454;
+  --line-strong: #86868f;
+  --accent: #0a7a4e;
+  --accent-hover: #087247;
   --accent-ink: #ffffff;
-  --accent-bg: rgba(15, 157, 99, 0.1);
-  --accent-ring: rgba(15, 157, 99, 0.35);
-  --good: #0f9d63;
-  --good-bg: rgba(15, 157, 99, 0.1);
-  --caution: #a16207;
-  --caution-bg: rgba(161, 98, 7, 0.1);
-  --flag: #c2410c;
-  --flag-bg: rgba(194, 65, 12, 0.1);
+  --accent-bg: rgba(10, 122, 78, 0.1);
+  --accent-ring: rgba(10, 122, 78, 0.35);
+  --good: #0a7a4e;
+  --good-bg: rgba(10, 122, 78, 0.1);
+  --caution: #92510a;
+  --caution-bg: rgba(146, 81, 10, 0.1);
+  --flag: #b3380a;
+  --flag-bg: rgba(179, 56, 10, 0.1);
   --info: #2f5fd6;
   --info-bg: rgba(47, 95, 214, 0.1);
   --shadow: 0 1px 2px rgba(9, 9, 11, 0.05), 0 8px 24px rgba(9, 9, 11, 0.06);
   --shadow-sm: 0 1px 2px rgba(9, 9, 11, 0.06);
-  --glow: 0 0 0 1px rgba(15, 157, 99, 0.25), 0 0 24px rgba(15, 157, 99, 0.1);
+  --glow: 0 0 0 1px rgba(10, 122, 78, 0.25), 0 0 24px rgba(10, 122, 78, 0.1);
 }
 
 @theme inline {
@@ -254,7 +254,7 @@ input[type="checkbox"] {
   align-items: center;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  background: var(--surface-2);
+  background: transparent;
   color: var(--ink);
   display: inline-flex;
   font-weight: 500;
@@ -265,10 +265,9 @@ input[type="checkbox"] {
   padding: 0 16px;
   text-decoration: none;
   white-space: nowrap;
-  box-shadow: var(--shadow-sm);
 }
 .btn:hover {
-  background: var(--surface-3);
+  background: var(--surface-2);
   border-color: var(--ink-3);
 }
 .btn:active {
@@ -353,7 +352,9 @@ input[type="checkbox"] {
   text-transform: uppercase;
   line-height: 1.2;
 }
-.pill::before {
+.pill-good::before,
+.pill-caution::before,
+.pill-flag::before {
   content: "";
   width: 6px;
   height: 6px;
@@ -532,6 +533,54 @@ input[type="checkbox"] {
 }
 .table tr.row-hover:hover td {
   background: var(--surface-2);
+}
+
+/* Popovers: fade and rise in, including from display:none, via allow-discrete */
+[popover] {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity var(--dur) var(--ease),
+    transform var(--dur) var(--ease),
+    display var(--dur) allow-discrete,
+    overlay var(--dur) allow-discrete;
+}
+[popover]:popover-open {
+  opacity: 1;
+  transform: none;
+}
+/* Never let a utility class re-display a closed popover (an invisible layer would eat taps). */
+[popover]:not(:popover-open) {
+  display: none !important;
+}
+@starting-style {
+  [popover]:popover-open {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+[popover]::backdrop {
+  transition: opacity var(--dur) var(--ease), display var(--dur) allow-discrete, overlay var(--dur) allow-discrete;
+}
+
+details > summary .marker {
+  display: inline-flex;
+  transition: transform var(--dur) var(--ease);
+}
+details[open] > summary .marker {
+  transform: rotate(90deg);
+}
+details > summary .marker::after {
+  content: none;
+}
+details[open] > summary .marker::after {
+  content: none;
+}
+
+.empty {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
 }
 
 /* Term popovers */

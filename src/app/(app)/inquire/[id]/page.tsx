@@ -9,7 +9,7 @@ import { PageHeader, Section } from "@/components/ui";
 import { deleteAttachment } from "@/db/actions";
 import { convertInquiryToDeal, deleteInquiry, setInquiryStatus } from "@/db/inquiry-actions";
 import { getInquiry, getInquiryAttachments, parseVehicle } from "@/db/queries";
-import { formatPercent } from "@/engine";
+import { formatPercent, ratio } from "@/engine";
 import { ATTACHMENT_KINDS } from "@/lib/attachments";
 import { Uploader } from "@/app/(app)/deals/[id]/attachments/uploader";
 import { Thumb } from "@/app/(app)/deals/[id]/attachments/viewer";
@@ -35,7 +35,7 @@ async function Inquiry({ params, searchParams }: { params: PageProps<"/inquire/[
   const v = parseVehicle(inq.vehicle);
   const adv = inq.advertised_price_cents === null ? null : Number(inq.advertised_price_cents);
   const msrp = inq.msrp_cents === null ? null : Number(inq.msrp_cents);
-  const ratio = adv !== null && msrp ? adv / msrp : null;
+  const pct = ratio(adv, msrp);
   const kindLabel = (k: string) => ATTACHMENT_KINDS.find((x) => x.value === k)?.label ?? k;
 
   if (editing) {
@@ -97,7 +97,7 @@ async function Inquiry({ params, searchParams }: { params: PageProps<"/inquire/[
               <dd className="metric-value num">
                 <Money cents={adv} label="Advertised price" />
               </dd>
-              {ratio !== null && <dd className="text-xs text-ink-3">{formatPercent(ratio)} of the listed MSRP</dd>}
+              {pct !== null && <dd className="text-xs text-ink-3">{formatPercent(pct)} of the listed MSRP</dd>}
             </div>
             <div>
               <dt className="eyebrow">Listed MSRP / Total SRP</dt>

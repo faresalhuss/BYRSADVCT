@@ -6,7 +6,7 @@ import { MapLink } from "@/components/map-link";
 import { Money } from "@/components/money";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { listInquiries, parseVehicle } from "@/db/queries";
-import { formatPercent } from "@/engine";
+import { formatPercent, ratio } from "@/engine";
 import { formatDate } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Inquire" };
@@ -81,7 +81,7 @@ function Card({ r }: { r: Awaited<ReturnType<typeof listInquiries>>[number] }) {
   const st = STATUS[r.status] ?? STATUS.to_call!;
   const adv = r.advertised_price_cents === null ? null : Number(r.advertised_price_cents);
   const msrp = r.msrp_cents === null ? null : Number(r.msrp_cents);
-  const ratio = adv !== null && msrp ? adv / msrp : null;
+  const pct = ratio(adv, msrp);
   return (
     <li className="card card-hover flex flex-col gap-3 p-4">
       <div className="flex items-start justify-between gap-2">
@@ -102,7 +102,7 @@ function Card({ r }: { r: Awaited<ReturnType<typeof listInquiries>>[number] }) {
         </div>
         <div>
           <dt className="eyebrow">Of MSRP</dt>
-          <dd className="num text-base font-semibold">{ratio === null ? "n/a" : formatPercent(ratio)}</dd>
+          <dd className="num text-base font-semibold">{formatPercent(pct)}</dd>
         </div>
         {v.exteriorColor && (
           <div>

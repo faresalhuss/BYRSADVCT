@@ -110,7 +110,7 @@ async function Summary({ params }: { params: PageProps<"/deals/[id]/print">["par
       <section className="mt-4">
         <h2 className="text-base">Target</h2>
         <p>
-          At {formatPercent(ctx.settingsBundle.settings.thresholds.strongRatio, 1)} of total SRP the all-in target is {formatCents(r.target.targetAllInCents)}; ask for a selling price of {formatCents(r.target.targetSellingPriceCents)} ({formatCents(r.target.gapCents)} below the current offer).
+          At {formatPercent(ctx.settingsBundle.settings.thresholds.strongRatio, 1)} of total SRP the all-in target is {formatCents(r.target.targetAllInCents)}; ask for a selling price of {formatCents(r.target.targetSellingPriceCents)}{r.target.gapCents === null ? "" : r.target.gapCents > 0 ? ` (${formatCents(r.target.gapCents)} below the current offer)` : " (the current offer already meets it)"}.
         </p>
       </section>
     </article>

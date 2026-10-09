@@ -33,6 +33,19 @@ export default function GlossaryPage() {
               <div key={g.key} id={g.key} className="scroll-mt-20 py-4 first:pt-0">
                 <dt className="font-medium">{g.term}</dt>
                 <dd className="mt-1 text-sm text-ink-2">{g.short}</dd>
+                {g.related && g.related.length > 0 && (
+                  <dd className="mt-1 text-xs text-ink-3">
+                    See also:{" "}
+                    {g.related.map((r, i) => (
+                      <span key={r}>
+                        {i > 0 && ", "}
+                        <a href={`#${r}`} className="underline hover:text-accent">
+                          {GLOSSARY.find((x) => x.key === r)?.term ?? r}
+                        </a>
+                      </span>
+                    ))}
+                  </dd>
+                )}
                 <dd className="mt-2 grid gap-2 text-sm sm:grid-cols-3">
                   <div>
                     <p className="eyebrow">What it is</p>
