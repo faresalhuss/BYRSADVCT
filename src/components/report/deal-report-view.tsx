@@ -66,7 +66,7 @@ export function DealReportView({ report, sticker, vehicle, settings, dealId, sal
         <h2 id="verdict-h" className="mt-2 text-xl">
           {report.verdict.headline}
         </h2>
-        <dl className="mt-4 grid grid-cols-3 gap-3">
+        <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
           <div>
             <dt className="text-xs uppercase tracking-wide text-ink-2">All-in % SRP</dt>
             <dd className="text-2xl">
