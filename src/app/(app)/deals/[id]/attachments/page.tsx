@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/icons";
 import { PageHeader } from "@/components/ui";
 import { ConfirmForm } from "@/components/confirm-form";
 import { notFound } from "next/navigation";
@@ -52,6 +53,9 @@ async function Attachments({ params }: { params: PageProps<"/deals/[id]/attachme
                       Import
                     </Link>
                   )}
+                  <a href={`/api/attachments/${a.id}/file?download=1`} className="btn btn-sm" title="Download this file" aria-label={`Download ${a.original_name ?? kindLabel(a.kind)}`}>
+                    <Icon.Download size={14} /> Download
+                  </a>
                   <ConfirmForm action={deleteAttachment.bind(null, a.id, id)} message="Delete this file? This cannot be undone.">
                     <button type="submit" className="btn btn-quiet btn-sm text-ink-2">
                       Delete

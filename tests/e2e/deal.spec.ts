@@ -117,6 +117,17 @@ test.describe("deal flow (signed in)", () => {
     await expect(thumb).toBeVisible({ timeout: 30_000 });
     await expect.poll(() => thumb.evaluate((el) => (el as HTMLImageElement).naturalWidth), { timeout: 30_000 }).toBeGreaterThan(0);
 
+    // The file can be downloaded, not only viewed.
+    await expect(page.getByRole("link", { name: "Download sticker.pdf" })).toHaveAttribute("href", /\/file\?download=1$/);
+
+    // The Inquire tab ranks the list and says why each listing sits where it does.
+    await page.goto("/inquire");
+    await expect(page.getByText("Call them in this order.")).toBeVisible();
+    const card = page.locator("li", { hasText: name }).first();
+    await expect(card.getByText("No price yet. Add the advertised price and MSRP to rank it.")).toBeVisible();
+    await card.locator('a[href^="/inquire/"]').first().click();
+    await expect(page.getByRole("heading", { name, exact: true, level: 1 })).toBeVisible();
+
     // Delete the listing (removes its files too).
     page.once("dialog", (d) => void d.accept());
     await page.getByRole("button", { name: "Delete", exact: true }).first().click();

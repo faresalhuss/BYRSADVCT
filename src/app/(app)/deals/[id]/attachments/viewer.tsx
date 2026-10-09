@@ -107,6 +107,9 @@ export function Viewer({ id, mime, name, onClose }: { id: string; mime: string; 
           <a href={src} className="tap inline-flex items-center rounded-sm border border-white/70 px-3 text-sm" target="_blank" rel="noreferrer">
             Open
           </a>
+          <a href={`${src}?download=1`} className="tap inline-flex items-center rounded-sm border border-white/70 px-3 text-sm">
+            Download
+          </a>
           <button type="button" className="tap rounded-sm border border-white/70 px-3 text-sm" onClick={onClose}>
             Close
           </button>

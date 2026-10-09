@@ -1,19 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-/** Redirects to a short-lived signed URL for the attachment (or its thumbnail). */
+/** Redirects to a short-lived signed URL for the attachment (or its thumbnail); `?download=1` makes the browser save it. */
 export async function GET(req: NextRequest, ctx: RouteContext<"/api/attachments/[id]/file">) {
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   if (!claims?.claims) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const { id } = await ctx.params;
-  const { data } = await supabase.from("attachments").select("storage_path, thumb_path, mime").eq("id", id).maybeSingle();
+  const { data } = await supabase.from("attachments").select("storage_path, thumb_path, mime, original_name").eq("id", id).maybeSingle();
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
   const wantThumb = req.nextUrl.searchParams.get("thumb") === "1";
   let thumbPath = data.thumb_path;
   if (wantThumb && !thumbPath && data.mime === "application/pdf") thumbPath = await backfillPdfThumb(supabase, id, data.storage_path);
   const path = wantThumb && thumbPath ? thumbPath : data.storage_path;
-  const { data: signed, error } = await supabase.storage.from("attachments").createSignedUrl(path, 600);
+  const wantDownload = req.nextUrl.searchParams.get("download") === "1";
+  const { data: signed, error } = await supabase.storage.from("attachments").createSignedUrl(path, 600, wantDownload ? { download: data.original_name ?? true } : undefined);
   if (error || !signed) return NextResponse.json({ error: error?.message ?? "Could not sign." }, { status: 500 });
   return NextResponse.redirect(signed.signedUrl, { headers: { "cache-control": "private, max-age=300" } });
 }

@@ -6,8 +6,8 @@ import { MapLink } from "@/components/map-link";
 import { Money } from "@/components/money";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { listInquiries, parseVehicle } from "@/db/queries";
-import { formatPercent, ratio } from "@/engine";
-import { formatDate } from "@/lib/dates";
+import { formatPercent, rankInquiries, ratio, type RankedInquiry } from "@/engine";
+import { formatDate, todayIso } from "@/lib/dates";
 import { normalizePhone, telHref } from "@/lib/phone";
 
 export const metadata: Metadata = { title: "Inquire" };
@@ -54,21 +54,30 @@ async function List() {
       </EmptyState>
     );
   }
-  const open = rows.filter((r) => r.status === "to_call" || r.status === "called");
-  const done = rows.filter((r) => r.status === "converted" || r.status === "dismissed");
+  // Best first: advertised ÷ MSRP, then price-only listings, then unpriced (see engine/inquiries.ts).
+  const ranked = rankInquiries(
+    rows.map((r) => ({ id: r.id, status: r.status, advertisedCents: r.advertised_price_cents === null ? null : Number(r.advertised_price_cents), msrpCents: r.msrp_cents === null ? null : Number(r.msrp_cents), stockDate: parseVehicle(r.vehicle).stockDate ?? null })),
+    todayIso(),
+  );
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const open = ranked.filter((x) => x.rank !== null);
+  const done = ranked.filter((x) => x.rank === null);
   return (
     <div className="flex flex-col gap-6">
+      <p className="text-sm text-ink-2">
+        Call them in this order. Listings are ranked on what you know so far: advertised price as a share of MSRP first, then listings with a price but no sticker, then listings with no price. Older stock breaks ties. Add the MSRP to any card to move it into the comparison.
+      </p>
       <ul className="rise-stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {open.map((r) => (
-          <Card key={r.id} r={r} />
+        {open.map((x) => (
+          <Card key={x.id} r={byId.get(x.id)!} ranked={x} />
         ))}
       </ul>
       {done.length > 0 && (
         <details>
           <summary className="tap inline-flex cursor-pointer items-center text-sm text-ink-2">Converted and dismissed ({done.length})</summary>
           <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {done.map((r) => (
-              <Card key={r.id} r={r} />
+            {done.map((x) => (
+              <Card key={x.id} r={byId.get(x.id)!} ranked={x} />
             ))}
           </ul>
         </details>
@@ -77,7 +86,7 @@ async function List() {
   );
 }
 
-function Card({ r }: { r: Awaited<ReturnType<typeof listInquiries>>[number] }) {
+function Card({ r, ranked }: { r: Awaited<ReturnType<typeof listInquiries>>[number]; ranked: RankedInquiry }) {
   const v = parseVehicle(r.vehicle);
   const st = STATUS[r.status] ?? STATUS.to_call!;
   const adv = r.advertised_price_cents === null ? null : Number(r.advertised_price_cents);
@@ -88,6 +97,11 @@ function Card({ r }: { r: Awaited<ReturnType<typeof listInquiries>>[number] }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <Link href={`/inquire/${r.id}`} className="block truncate font-medium hover:text-accent">
+            {ranked.rank !== null && (
+              <span className="mono mr-2 text-xs text-ink-3">
+                <span className="sr-only">Call order </span>#{ranked.rank}
+              </span>
+            )}
             {r.dealership_name}
           </Link>
           <p className="truncate text-sm text-ink-2">{[v.year, v.make, v.model, v.trim].filter(Boolean).join(" ") || "Vehicle not entered"}</p>
@@ -118,6 +132,7 @@ function Card({ r }: { r: Awaited<ReturnType<typeof listInquiries>>[number] }) {
           </div>
         )}
       </dl>
+      <p className={`text-xs ${ranked.tier === "priced" ? "text-ink-3" : "text-caution"}`}>{ranked.reason}</p>
       <div className="flex flex-col gap-1">
         <MapLink name={r.dealership_name} address={r.address_line} city={r.city} state={r.state} zip={r.zip} />
         {r.phone && (

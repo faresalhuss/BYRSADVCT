@@ -41,3 +41,6 @@ Safari (and Chrome) can restore a page from the bfcache with the old component s
 
 ## PDF thumbnails
 `src/lib/pdf-thumb.ts` rasterizes page 1 with pdf.js (legacy build) on `@napi-rs/canvas` and encodes a 640px WebP with sharp. The finalize route does it at upload; the file route backfills older PDFs on the first `?thumb=1` request. Both packages are `serverExternalPackages`, and `outputFileTracingIncludes` ships pdf.js's `standard_fonts` folder because pdf.js reads those files from disk at runtime (file tracing cannot see that).
+
+## Inquiry ranking
+`src/engine/inquiries.ts` orders saved listings best first on what the listing itself says: advertised ÷ MSRP (comparable across builds), then price-only listings, then unpriced; older stock breaks ties and the id makes the order deterministic. It is a pure total order with a fast-check property test, and every card carries the one-sentence reason so the user sees why it sits where it does.

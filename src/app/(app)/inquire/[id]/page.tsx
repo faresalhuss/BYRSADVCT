@@ -184,11 +184,16 @@ async function Inquiry({ params, searchParams }: { params: PageProps<"/inquire/[
                   <Thumb id={a.id} mime={a.mime} name={a.original_name ?? kindLabel(a.kind)} />
                   <div className="flex items-center justify-between gap-2 p-2 text-xs">
                     <span className="eyebrow min-w-0 truncate">{kindLabel(a.kind)}</span>
-                    <ConfirmForm action={deleteAttachment.bind(null, a.id, `inquire/${id}`)} message="Delete this file?">
-                      <button type="submit" className="btn btn-quiet btn-sm text-ink-3">
-                        Delete
-                      </button>
-                    </ConfirmForm>
+                    <span className="flex shrink-0 items-center gap-1">
+                      <a href={`/api/attachments/${a.id}/file?download=1`} className="btn btn-quiet btn-sm text-ink-3" title="Download this file" aria-label={`Download ${a.original_name ?? kindLabel(a.kind)}`}>
+                        <Icon.Download size={14} />
+                      </a>
+                      <ConfirmForm action={deleteAttachment.bind(null, a.id, `inquire/${id}`)} message="Delete this file?">
+                        <button type="submit" className="btn btn-quiet btn-sm text-ink-3">
+                          Delete
+                        </button>
+                      </ConfirmForm>
+                    </span>
                   </div>
                 </li>
               ))}
