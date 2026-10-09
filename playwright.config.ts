@@ -1,4 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import { existsSync } from "node:fs";
+
+for (const f of [".env.local", ".env.e2e.local"]) {
+  if (existsSync(f)) process.loadEnvFile(f);
+}
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 

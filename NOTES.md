@@ -9,3 +9,7 @@ One line per lesson. Corrections and confirmed approaches alike. Why each matter
 - Vercel MCP cannot list env vars (403); `vercel env ls` via the CLI works and prints names only.
 - `ANTHROPIC_API_KEY` is set for Production only; Preview and Development lack it, so the import option hides there until the owner adds it.
 - Golden fixture implied APR reproduces only when principal = dealer balance minus the column's cash down (56,545.91 minus 0 / 2,500 / 5,000).
+- With cacheComponents on, `usePathname()` in a client component must sit under a `<Suspense>` boundary or `next build` fails prerendering every route that renders it; the nav tabs are wrapped with a static fallback.
+- Vercel caps request bodies at 4.5 MB, so attachments upload from the browser straight to the private Supabase bucket; a finalize route then converts HEIC, builds the thumbnail and records the row.
+- NHTSA vPIC returns an empty Trim for this 4Runner VIN and "55 Series" in Series; Series is not a trim, so it is not compared against the entered trim (avoids a false mismatch flag).
+- E2E signs in a dedicated password user by calling supabase-js in Node and letting @supabase/ssr serialize the cookies; the app's own UI stays magic-link only.
