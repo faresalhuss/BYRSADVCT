@@ -275,11 +275,16 @@ export function computeFlags(ctx: FlagContext): Flag[] {
     push({ code: "payoff_expired", severity: "caution", title: "Payoff quote is past its good-through date", detail: `Payoff was good through ${input.trade.payoffGoodThrough}. Get a fresh payoff from the lender.`, impactCents: null });
   }
 
-  // Benchmarks
-  for (const b of input.benchmarks ?? []) {
-    if (daysBetween(b.observedOn, today) > settings.benchmarkStaleDays) {
-      push({ code: "benchmark_stale", severity: "info", title: `Benchmark from ${b.source} is older than ${settings.benchmarkStaleDays} days`, detail: `Observed ${b.observedOn}.`, impactCents: null });
-    }
+  // Benchmarks: one consolidated note, not one flag per stale data point.
+  const stale = (input.benchmarks ?? []).filter((b) => daysBetween(b.observedOn, today) > settings.benchmarkStaleDays);
+  if (stale.length > 0) {
+    push({
+      code: "benchmark_stale",
+      severity: "info",
+      title: `${stale.length} benchmark${stale.length === 1 ? " is" : "s are"} older than ${settings.benchmarkStaleDays} days`,
+      detail: `${stale.map((b) => `${b.source} (${b.observedOn})`).join("; ")}. Treat them as context, not as current market.`,
+      impactCents: null,
+    });
   }
 
   return flags;
