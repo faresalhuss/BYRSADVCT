@@ -68,6 +68,19 @@ export async function POST(req: NextRequest) {
     } catch {
       thumbPath = null;
     }
+  } else if (mime === "application/pdf") {
+    try {
+      const { renderPdfThumbnail } = await import("@/lib/pdf-thumb");
+      const res = await renderPdfThumbnail(buffer);
+      width = res.width;
+      height = res.height;
+      thumbPath = storagePath.replace(/\.[a-z0-9]+$/i, "") + ".thumb.webp";
+      const { error: tErr } = await bucket.upload(thumbPath, res.thumb, { contentType: "image/webp", upsert: true });
+      if (tErr) thumbPath = null;
+    } catch (e) {
+      console.error("pdf thumbnail failed at upload", e);
+      thumbPath = null;
+    }
   }
 
   const sub = typeof claims.claims.sub === "string" ? claims.claims.sub : null;

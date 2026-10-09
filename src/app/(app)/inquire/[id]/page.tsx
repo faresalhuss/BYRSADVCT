@@ -183,7 +183,7 @@ async function Inquiry({ params, searchParams }: { params: PageProps<"/inquire/[
                 <li key={a.id} className="card flex flex-col overflow-hidden">
                   <Thumb id={a.id} mime={a.mime} name={a.original_name ?? kindLabel(a.kind)} />
                   <div className="flex items-center justify-between gap-2 p-2 text-xs">
-                    <span className="pill pill-info pill-plain">{kindLabel(a.kind)}</span>
+                    <span className="eyebrow min-w-0 truncate">{kindLabel(a.kind)}</span>
                     <ConfirmForm action={deleteAttachment.bind(null, a.id, `inquire/${id}`)} message="Delete this file?">
                       <button type="submit" className="btn btn-quiet btn-sm text-ink-3">
                         Delete

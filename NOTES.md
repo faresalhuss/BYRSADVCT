@@ -35,3 +35,9 @@ A class on `th` loses to the `.table th` rule on specificity, so numeric headers
 
 ## Phone numbers
 `src/lib/phone.ts` formats progressively as you type ("(678) 224-9057"), the Zod schemas normalize on save, and every display site renders `telHref()` so the number is tappable. International numbers (`+44 ...`) are left as typed.
+
+## Lesson: the back/forward cache restores React state
+Safari (and Chrome) can restore a page from the bfcache with the old component state intact, so pressing Back after saving a new listing showed the create form still filled in. The inquiry form now resets on `pageshow` with `persisted`, and both editors `router.replace` after a create so Back does not return to the form at all.
+
+## PDF thumbnails
+`src/lib/pdf-thumb.ts` rasterizes page 1 with pdf.js (legacy build) on `@napi-rs/canvas` and encodes a 640px WebP with sharp. The finalize route does it at upload; the file route backfills older PDFs on the first `?thumb=1` request. Both packages are `serverExternalPackages`, and `outputFileTracingIncludes` ships pdf.js's `standard_fonts` folder because pdf.js reads those files from disk at runtime (file tracing cannot see that).

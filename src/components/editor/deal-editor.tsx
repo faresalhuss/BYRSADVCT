@@ -193,7 +193,7 @@ export function DealEditor({ mode, dealId, initial, previousOffer, context }: Pr
       await clearDraft(draftKey);
       dirtyRef.current = false;
       setSync("saved");
-      router.push(`/deals/${res.data.id}`);
+      router.replace(`/deals/${res.data.id}`);
       router.refresh();
     });
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { MoneyInput } from "@/components/editor/money-input";
 import { VinField } from "@/components/editor/vin-field";
 import { formatPhoneInput } from "@/lib/phone";
@@ -20,6 +20,22 @@ export function InquiryEditor({ mode, id, initial }: { mode: "new" | "edit"; id:
   const vin = checkVin(form.vehicle.vin);
   const pct = ratio(form.advertisedPriceCents, form.msrpCents);
 
+  // Safari and Chrome restore a page from the back/forward cache with its old React state intact.
+  // A restored "new" form must start blank again, not show the listing that was just saved.
+  useEffect(() => {
+    if (mode !== "new") return;
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setForm(initial);
+        setDecoded(null);
+        setError(null);
+        setIssues({});
+      }
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, [mode, initial]);
+
   function save() {
     setError(null);
     setIssues({});
@@ -30,7 +46,9 @@ export function InquiryEditor({ mode, id, initial }: { mode: "new" | "edit"; id:
         setIssues(res.issues ?? {});
         return;
       }
-      router.push(`/inquire/${res.data.id}`);
+      if (mode === "new") setForm(initial);
+      // replace, so Back from the saved listing does not land on a filled-in create form
+      router.replace(`/inquire/${res.data.id}`);
       router.refresh();
     });
   }

@@ -39,7 +39,7 @@ async function Attachments({ params }: { params: PageProps<"/deals/[id]/attachme
             <li key={a.id} className="card flex flex-col overflow-hidden">
               <Thumb id={a.id} mime={a.mime} name={a.original_name ?? kindLabel(a.kind)} />
               <div className="flex flex-1 flex-col gap-1 p-2 text-xs">
-                <span className="pill pill-info self-start">{kindLabel(a.kind)}</span>
+                <span className="eyebrow truncate">{kindLabel(a.kind)}</span>
                 <span className="truncate" title={a.original_name ?? undefined}>
                   {a.original_name ?? "file"}
                 </span>

@@ -4,16 +4,19 @@ import { useEffect, useRef, useState } from "react";
 
 export function Thumb({ id, mime, name }: { id: string; mime: string; name: string }) {
   const [open, setOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
   const isImage = mime.startsWith("image/");
+  const isPdf = mime === "application/pdf";
   return (
     <>
       <button type="button" className="relative block aspect-[4/3] w-full bg-surface-2" onClick={() => setOpen(true)} aria-label={`Open ${name}`}>
-        {isImage ? (
+        {(isImage || isPdf) && !failed ? (
           // eslint-disable-next-line @next/next/no-img-element -- signed URL via redirect; next/image cannot optimize it
-          <img src={`/api/attachments/${id}/file?thumb=1`} alt={name} loading="lazy" className="h-full w-full object-cover" />
+          <img src={`/api/attachments/${id}/file?thumb=1`} alt={name} loading="lazy" onError={() => setFailed(true)} className={`h-full w-full ${isPdf ? "bg-white object-cover object-top" : "object-cover"}`} />
         ) : (
-          <span className="flex h-full items-center justify-center text-sm text-ink-2">PDF</span>
+          <span className="flex h-full items-center justify-center text-sm text-ink-2">{isPdf ? "PDF" : "File"}</span>
         )}
+        {isPdf && !failed && <span className="pill pill-info pill-plain absolute bottom-1.5 right-1.5">PDF</span>}
       </button>
       {open && <Viewer id={id} mime={mime} name={name} onClose={() => setOpen(false)} />}
     </>

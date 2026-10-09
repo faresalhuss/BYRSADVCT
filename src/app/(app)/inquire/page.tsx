@@ -92,7 +92,7 @@ function Card({ r }: { r: Awaited<ReturnType<typeof listInquiries>>[number] }) {
           </Link>
           <p className="truncate text-sm text-ink-2">{[v.year, v.make, v.model, v.trim].filter(Boolean).join(" ") || "Vehicle not entered"}</p>
         </div>
-        <span className={`pill ${st.cls}`}>{st.label}</span>
+        <span className={`pill shrink-0 ${st.cls}`}>{st.label}</span>
       </div>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
         <div>

@@ -12,7 +12,7 @@ export default defineConfig({
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
-  use: { baseURL, trace: "retain-on-failure" },
+  use: { baseURL, trace: "retain-on-failure", extraHTTPHeaders: process.env.E2E_BYPASS ? { "x-vercel-protection-bypass": process.env.E2E_BYPASS } : {} },
   projects: [
     { name: "iphone", use: { ...devices["iPhone 15"] } },
     { name: "pixel", use: { ...devices["Pixel 7"] } },

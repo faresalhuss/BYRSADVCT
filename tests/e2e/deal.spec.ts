@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { cleanup, e2eCreds, signIn } from "./auth";
+import { tinyPdf } from "../fixtures/tiny-pdf";
 
 const creds = e2eCreds();
 const PREFIX = "E2E ";
@@ -93,6 +94,33 @@ test.describe("deal flow (signed in)", () => {
     page.once("dialog", (d) => void d.accept());
     await page.getByRole("button", { name: "Archive", exact: true }).click();
     await expect(page.getByText("archived", { exact: true })).toBeVisible();
+  });
+
+  test("inquiry: the new form starts blank, the phone formats itself, and a PDF sticker gets a rendered thumbnail", async ({ page }) => {
+    const name = `${PREFIX}inq-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    await page.goto("/inquire/new");
+    await expect(page.getByRole("heading", { name: "New listing", exact: true, level: 1 })).toBeVisible();
+    await expect(page.getByLabel("Dealership name")).toHaveValue("");
+    await expect(page.getByLabel("VIN")).toHaveValue("");
+    await page.getByLabel("Dealership name").fill(name);
+    await page.getByLabel("Phone").fill("6782249057");
+    await expect(page.getByLabel("Phone")).toHaveValue("(678) 224-9057");
+    await page.getByRole("button", { name: "Save listing" }).click();
+    await expect(page).toHaveURL(/\/inquire\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole("heading", { name, exact: true, level: 1 })).toBeVisible();
+    await expect(page.getByRole("link", { name: /\(678\) 224-9057/ })).toHaveAttribute("href", "tel:+16782249057");
+
+    // A PDF window sticker is rasterized to a thumbnail at upload.
+    await page.locator('input[type="file"]').setInputFiles({ name: "sticker.pdf", mimeType: "application/pdf", buffer: tinyPdf() });
+    await expect(page.getByText("Added sticker.pdf")).toBeVisible({ timeout: 45_000 });
+    const thumb = page.locator('img[alt="sticker.pdf"]');
+    await expect(thumb).toBeVisible({ timeout: 30_000 });
+    await expect.poll(() => thumb.evaluate((el) => (el as HTMLImageElement).naturalWidth), { timeout: 30_000 }).toBeGreaterThan(0);
+
+    // Delete the listing (removes its files too).
+    page.once("dialog", (d) => void d.accept());
+    await page.getByRole("button", { name: "Delete", exact: true }).first().click();
+    await expect(page).toHaveURL(/\/inquire$/);
   });
 
   test("settings and trade pages load and save", async ({ page }) => {
