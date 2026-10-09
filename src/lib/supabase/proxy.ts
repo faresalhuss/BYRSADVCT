@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isAllowedEmail } from "@/lib/allowlist";
 
-const PUBLIC_PREFIXES = ["/login", "/auth", "/manifest.webmanifest", "/sw.js", "/icons", "/offline"];
+const PUBLIC_PREFIXES = ["/login", "/manifest.webmanifest", "/sw.js", "/icons", "/offline"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

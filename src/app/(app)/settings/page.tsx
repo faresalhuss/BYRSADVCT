@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getSettingsBundle } from "@/db/queries";
+import { PasswordForm } from "./password-form";
 import { SettingsForm } from "./settings-form";
 import { TaxRuleForm } from "./tax-rule-form";
 
@@ -31,7 +32,12 @@ async function Settings() {
         <p className="mt-1 text-xs text-ink-2">Rules are versioned. Saving a changed rule under a new id keeps the old one for history.</p>
         <TaxRuleForm initial={bundle.taxRule} />
       </section>
-      <section className="card p-4 lg:col-span-2">
+      <section className="card p-4">
+        <h2 className="text-lg">Your password</h2>
+        <p className="mt-1 text-xs text-ink-2">At least 10 characters. Takes effect on your next sign-in.</p>
+        <PasswordForm />
+      </section>
+      <section className="card p-4">
         <h2 className="text-lg">Export</h2>
         <p className="mt-1 text-sm text-ink-2">Everything you have entered, as a file.</p>
         <div className="mt-2 flex flex-wrap gap-2">

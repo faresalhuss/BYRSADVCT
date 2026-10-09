@@ -13,3 +13,4 @@ One line per lesson. Corrections and confirmed approaches alike. Why each matter
 - Vercel caps request bodies at 4.5 MB, so attachments upload from the browser straight to the private Supabase bucket; a finalize route then converts HEIC, builds the thumbnail and records the row.
 - NHTSA vPIC returns an empty Trim for this 4Runner VIN and "55 Series" in Series; Series is not a trim, so it is not compared against the entered trim (avoids a false mismatch flag).
 - E2E signs in a dedicated password user by calling supabase-js in Node and letting @supabase/ssr serialize the cookies; the app's own UI stays magic-link only.
+- Owner chose email + password over magic link (no Supabase redirect-URL setup for a personal tool). Accounts were created by SQL with confirmed emails; initial passwords live in the gitignored `.credentials.local`; Settings has a change-password form that needs no email.

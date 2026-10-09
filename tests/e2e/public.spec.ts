@@ -5,7 +5,7 @@ test("unauthenticated visit to the deals list redirects to sign-in", async ({ pa
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: "BYRSADVCT" })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Send sign-in link" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });
 
 test("web app manifest and offline page are served", async ({ page, request }) => {
@@ -22,6 +22,7 @@ test("web app manifest and offline page are served", async ({ page, request }) =
 test("sign-in form rejects an address that is not on the allowlist", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email").fill("stranger@example.com");
-  await page.getByRole("button", { name: "Send sign-in link" }).click();
+  await page.getByLabel("Password").fill("whatever-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.locator("#login-error")).toContainText("not on the allowlist");
 });
