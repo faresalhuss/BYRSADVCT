@@ -103,6 +103,13 @@ describe("regressions from the engine review", () => {
     expect(r.missing.some((m) => m.startsWith("government fees"))).toBe(true);
   });
 
+  it("a sticker with a total but no lines yet is not a mismatch", () => {
+    const r = evaluateDeal(base({ sticker: { lines: [], totalSrpCents: 6236000 } }));
+    expect(r.sticker.reconciles).toBeNull();
+    expect(r.sticker.lineSum.value).toBeNull();
+    expect(r.flags.some((f) => f.code === "sticker_mismatch")).toBe(false);
+  });
+
   it("number inputs to parseMoney round like their string form", () => {
     expect(parseMoney(1.005)).toBe(101);
     expect(parseMoney(58714.5)).toBe(5871450);

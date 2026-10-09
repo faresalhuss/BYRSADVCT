@@ -14,14 +14,15 @@ export function analyzeSticker(sticker: Sticker): StickerReport {
   const known = sumKnown(lines.map((l) => l.cents));
   const lineInputs = lines.map((l) => input(l.label, l.cents, "cents", l.source));
 
+  // No lines entered is "not yet entered", not a sum of zero.
   const lineSum = derived(
     "sticker.lineSum",
     "Sum of sticker line items",
-    known.unknown > 0 ? null : known.total,
+    lines.length === 0 || known.unknown > 0 ? null : known.total,
     "cents",
     "base MSRP + factory options + distributor options + DPH",
     lineInputs,
-    known.unknown > 0 ? `${known.unknown} line(s) have no amount yet` : undefined,
+    lines.length === 0 ? "No sticker lines entered yet" : known.unknown > 0 ? `${known.unknown} line(s) have no amount yet` : undefined,
   );
 
   const totalSrp = derived(
@@ -38,7 +39,7 @@ export function analyzeSticker(sticker: Sticker): StickerReport {
   const factoryMsrpPlusDph = derived(
     "sticker.factoryMsrpPlusDph",
     "Factory MSRP + DPH",
-    factory.unknown > 0 ? null : factory.total,
+    factoryLines.length === 0 || factory.unknown > 0 ? null : factory.total,
     "cents",
     "base MSRP + factory options + DPH (excludes distributor and dealer additions)",
     factoryLines.map((l) => input(l.label, l.cents, "cents", l.source)),
